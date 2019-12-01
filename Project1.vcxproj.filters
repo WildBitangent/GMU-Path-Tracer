@@ -1,0 +1,460 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{a23c0fd6-fe68-41f0-ac3a-2e20ba2d571d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Logger">
+      <UniqueIdentifier>{e9b77e90-de48-4ae8-b6aa-c2d10d57c2e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BVH-Nvidia">
+      <UniqueIdentifier>{789785e7-8a84-478c-a0c1-ae7236d5d1b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BVH-Nvidia\Headers">
+      <UniqueIdentifier>{9ff14f79-3987-4b1a-b21b-a512012a05d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="BVH-Nvidia\Sources">
+      <UniqueIdentifier>{cf9b88de-04bb-4187-a640-8d04d3e08511}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Lodepng">
+      <UniqueIdentifier>{8085c35b-ee44-4779-ae0e-5084d8fb1ced}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ImGUI">
+      <UniqueIdentifier>{b7a96464-f116-4050-892b-31a473362d89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\draw">
+      <UniqueIdentifier>{61b987af-78a0-4eba-a6cf-9b6c2f898f90}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Include\Window.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Renderer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Constants.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\UniqueDX11.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\async.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\async_logger-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\async_logger.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\common-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\common.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\backtracer-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\backtracer.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\circular_q.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\console_globals.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\file_helper-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\file_helper.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\fmt_helper.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\log_msg-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\log_msg.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\log_msg_buffer-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\log_msg_buffer.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\mpmc_blocking_q.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\null_mutex.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\os-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\os.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\pattern_formatter-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\pattern_formatter.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\periodic_worker-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\periodic_worker.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\registry-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\registry.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\synchronous_factory.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\thread_pool-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\details\thread_pool.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bin_to_hex.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\chrono.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\color.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\compile.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\core.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\format-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\format.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\locale.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\ostream.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\posix.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\printf.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\ranges.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\bundled\safe-duration-cast.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\fmt.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\fmt\ostr.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\formatter.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\logger-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\logger.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\android_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\ansicolor_sink-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\ansicolor_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\base_sink-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\base_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\basic_file_sink-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\basic_file_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\daily_file_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\dist_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\dup_filter_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\msvc_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\null_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\ostream_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\rotating_file_sink-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\rotating_file_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\sink-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\stdout_color_sinks-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\stdout_color_sinks.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\stdout_sinks-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\stdout_sinks.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\syslog_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\systemd_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\wincolor_sink-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\sinks\wincolor_sink.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\spdlog-inl.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\spdlog.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\tweakme.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\spdlog\version.h">
+      <Filter>Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Model.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Camera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Input.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Nvidia-SBVH\Array.h">
+      <Filter>BVH-Nvidia\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Nvidia-SBVH\BVH.h">
+      <Filter>BVH-Nvidia\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Nvidia-SBVH\BVHNode.h">
+      <Filter>BVH-Nvidia\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Nvidia-SBVH\GPUScene.h">
+      <Filter>BVH-Nvidia\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Nvidia-SBVH\linear_math.h">
+      <Filter>BVH-Nvidia\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Nvidia-SBVH\Sort.h">
+      <Filter>BVH-Nvidia\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Nvidia-SBVH\SplitBVHBuilder.h">
+      <Filter>BVH-Nvidia\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Nvidia-SBVH\Timer.h">
+      <Filter>BVH-Nvidia\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Nvidia-SBVH\Util.h">
+      <Filter>BVH-Nvidia\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Scene.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Util.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\BVHWrapper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\lodepng\lodepng.h">
+      <Filter>Lodepng</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\GUI.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\ImGUI\imconfig.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\ImGUI\imgui.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\ImGUI\imgui_impl_dx11.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\ImGUI\imgui_impl_win32.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\ImGUI\imgui_internal.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\ImGUI\imstb_rectpack.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\ImGUI\imstb_textedit.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\ImGUI\imstb_truetype.h">
+      <Filter>ImGUI</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Input.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Nvidia-SBVH\BVH.cpp">
+      <Filter>BVH-Nvidia\Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Nvidia-SBVH\BVHNode.cpp">
+      <Filter>BVH-Nvidia\Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Nvidia-SBVH\Sort.cpp">
+      <Filter>BVH-Nvidia\Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Nvidia-SBVH\SplitBVHBuilder.cpp">
+      <Filter>BVH-Nvidia\Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Nvidia-SBVH\Timer.cpp">
+      <Filter>BVH-Nvidia\Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Nvidia-SBVH\Util.cpp">
+      <Filter>BVH-Nvidia\Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\BVHWrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Include\lodepng\lodepng.cpp">
+      <Filter>Lodepng</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\GUI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Include\ImGUI\imgui.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Include\ImGUI\imgui_demo.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Include\ImGUI\imgui_draw.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Include\ImGUI\imgui_impl_dx11.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Include\ImGUI\imgui_impl_win32.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Include\ImGUI\imgui_widgets.cpp">
+      <Filter>ImGUI</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Assets\Shaders\extensionRayCast.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Assets\Shaders\raytracer.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Assets\Shaders\shadowRayCast.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Assets\Shaders\structs.h">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Assets\Shaders\shader.ps.hlsl">
+      <Filter>Shaders\draw</Filter>
+    </FxCompile>
+    <FxCompile Include="Assets\Shaders\shader.vs.hlsl">
+      <Filter>Shaders\draw</Filter>
+    </FxCompile>
+    <FxCompile Include="Assets\Shaders\newPath.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Assets\Shaders\materialGlass.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Assets\Shaders\logic.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Assets\Shaders\bsdf.h">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Assets\Shaders\random.h">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Assets\Shaders\materialUE4.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+</Project>
