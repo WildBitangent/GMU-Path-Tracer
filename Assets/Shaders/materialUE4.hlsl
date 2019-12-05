@@ -13,7 +13,7 @@ struct State
 
 ////////////////////////////////////////////
 
-RWStructuredBuffer<PathState> pathState : register(u1); 
+RWByteAddressBuffer pathState : register(u1);
 RWStructuredBuffer<Queue> queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
 StructuredBuffer<Light> lights : register(t3);
@@ -118,10 +118,8 @@ float3 ue4Evaluate(in State state, float3 direction)
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_DispatchThreadID)
 {
     uint stride = threadCountX * numGroups;
-	uint queueElementCount = queueCounters.Load(OFFSET_MATUE4);
-	uint extQueueOffset = queueCounters.Load(OFFSET_EXTRAY_UE4_OFFSET);
-	
-	//seed = giseed.xy;
+	uint queueElementCount = queueCounters.Load(OFFSET_QC_MATUE4);
+	uint extQueueOffset = queueCounters.Load(OFFSET_QC_EXTRAY_UE4_OFFSET);
 
     for (int i = 0; i < 16; i++)
 	{
@@ -137,9 +135,14 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
         float3 throughput = float3(0, 0, 0);
 
 		// fill the state
-        state.ray = pathState[index].ray;
-        state.normal = pathState[index].normal;
-        state.material = pathState[index].material;
+		state.ray.origin = _pstate_rayOrigin;
+		state.ray.direction = _pstate_rayDirection;
+		state.normal = _pstate_normal;
+		
+		float2 metallicRoughness = _pstate_matMetallicRoughness;
+		state.material.baseColor = _pstate_matColor;
+		state.material.metallic = metallicRoughness.x;
+		state.material.roughness = metallicRoughness.y;
 		
         sample.bsdfDir = ue4Sample(state);
         sample.pdf = ue4Pdf(state, sample.bsdfDir);
@@ -147,15 +150,18 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
         if (sample.pdf > 0.0)
             throughput = ue4Evaluate(state, sample.bsdfDir) * abs(dot(state.normal, sample.bsdfDir)) / sample.pdf;
 		
-		pathState[index].lightThroughput = throughput;
-		//pathState[index].lightThroughput = float3(0.5, 0.5, 0.5);
+		_set_pstate_lightThroughput(throughput);
 		
 		// create extended ray
-		pathState[index].ray = Ray::create(pathState[index].surfacePoint + sample.bsdfDir * EPSILON, sample.bsdfDir);
+		float3 surfacePoint = _pstate_surfacePoint;
+		Ray extRay = Ray::create(surfacePoint + sample.bsdfDir * EPSILON, sample.bsdfDir);
+		
+		_set_pstate_rayOrigin(extRay.origin);
+		_set_pstate_rayDirection(extRay.direction);
 		queue[extQueueOffset + queueIndex].extensionRay = index;
 
 		// set directLight
-        float3 lightDir = pathState[index].shadowRay.direction;
+		float3 lightDir = _pstate_shadowrayDirection;
 
         bool legitLight = dot(lightDir, state.normal) > 0.0;
 		uint shadowBallot = NvBallot(legitLight);
@@ -163,23 +169,20 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
         uint shadowRayOffset = 0;
 
         if (NvGetLaneId() == 0)
-            queueCounters.InterlockedAdd(OFFSET_SHADOWRAY, shadowRayCount, shadowRayOffset);
+            queueCounters.InterlockedAdd(OFFSET_QC_SHADOWRAY, shadowRayCount, shadowRayOffset);
 		
         broadcast(shadowRayOffset);
         uint shadowIndex = NvWaveMultiPrefixExclusiveAdd(1, shadowBallot);
 		
 		if (legitLight)
 		{
-			int lightIndex = pathState[index].lightIndex;
-			float distance = pathState[index].lightDistance;
+			uint lightIndex = _pstate_lightIndex;
+			float distance = _pstate_lightDistance;
 			Light light = lights[lightIndex];
 			
-			pathState[index].directLight = ue4Evaluate(state, lightDir) * light.emission * lightFalloff(distance, light.radius);
+			float3 directLight = ue4Evaluate(state, lightDir) * light.emission * lightFalloff(distance, light.radius);
+			_set_pstate_directlight(directLight);
 			queue[shadowRayOffset + shadowIndex].shadowRay = index;
 		}
 	}
-	
-	// update extension ray queue count
-	//if (tid + gid.x == 0)
-	//	queueCounters.Store(OFFSET_EXTRAY, extQueueOffset + queueElementCount);
 }

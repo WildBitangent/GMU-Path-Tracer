@@ -10,7 +10,7 @@ cbuffer Material : register(b1)
 
 ////////////////////////////////////////////
 RWTexture2DArray<float4> output : register(u0); // TODO probably globally coherent
-RWStructuredBuffer<PathState> pathState : register(u1);
+RWByteAddressBuffer pathState : register(u1);
 RWStructuredBuffer<Queue> queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
 
@@ -38,7 +38,7 @@ void endPath(in float3 radiance, in uint index)
 	uint qindex = NvWaveMultiPrefixExclusiveAdd(1, ballot);
 
 	if (NvGetLaneId() == 0)
-		queueCounters.InterlockedAdd(OFFSET_NEWPATH, count, offset);
+		queueCounters.InterlockedAdd(OFFSET_QC_NEWPATH, count, offset);
 	
 	broadcast(offset);
 	
@@ -47,7 +47,7 @@ void endPath(in float3 radiance, in uint index)
 	{
 		radiance = saturate(radiance);
 
-		uint2 coord = pathState[index].screenCoord;
+		uint2 coord = _pstate_screenCoord;
 
 		float3 pixel = output[uint3(coord, 0)].rgb;
 		uint sampleCount = asuint(output[uint3(coord, 0)].a);
@@ -70,9 +70,9 @@ void endPath(in float3 radiance, in uint index)
 
 uint setMaterialHitProperties(in uint index)
 {
-    uint3 indices = pathState[index].tri.vtix;
-    uint materialID = pathState[index].tri.materialID;
-    float3 baryCoord = pathState[index].baryCoord;
+	uint4 tri = _pstate_triangle;
+	float3 indices = tri.xyz;
+	float3 baryCoord = _pstate_baryCoord;
 
     float2 t0 = triParams[indices.x].texCoord;
     float2 t1 = triParams[indices.y].texCoord;
@@ -85,7 +85,7 @@ uint setMaterialHitProperties(in uint index)
 	float2 texCoord = t0 * baryCoord.x + t1 * baryCoord.y + t2 * baryCoord.z;
     float3 normal = n0 * baryCoord.x + n1 * baryCoord.y + n2 * baryCoord.z;
 	
-    MaterialProperty material = materialProp[materialID];
+    MaterialProperty material = materialProp[tri.w];
     //state.material.roughness = saturate(state.material.roughness + cam.sampleCounter * 0.0001);
 	
     if (material.diffuseIndex >= 0)
@@ -104,7 +104,7 @@ uint setMaterialHitProperties(in uint index)
         data = data * 2.0 - 1.0; // TODO maybe normalize
 
 		// flip the normal, if the ray is coming from behind
-        float3 rayDirection = pathState[index].ray.direction;
+		float3 rayDirection = _pstate_rayDirection;
         float3 ortNormal = dot(normal, rayDirection) <= 0.0 ? normal : normal * -1.0;
 
 		// orthonormal basis
@@ -116,12 +116,11 @@ uint setMaterialHitProperties(in uint index)
     }
 
     material.roughness = max(0.014, material.roughness); // gotta clip roughness - floating point precission
-
-    pathState[index].material.baseColor = material.baseColor;
-    pathState[index].material.metallic = material.metallic;
-    pathState[index].material.roughness = material.roughness;
-	pathState[index].normal = normal;
-
+	
+	_set_pstate_matColor(material.baseColor.xyz);
+	_set_pstate_matMetallicRoughness(float2(material.metallic, material.roughness));
+	_set_pstate_normal(normal);
+	
     return material.materialType;
 }
 
@@ -130,17 +129,20 @@ void createShadowRay(in uint index)
 	uint lightIndex = uint(rand() * 2); // TODO change: 2 = num of lights
 	
 	// set shadow ray
-    float3 normal = pathState[index].normal;
-    float3 surfacePos = pathState[index].surfacePoint + normal * EPSILON;
+	float3 normal = _pstate_normal;
+	float3 surfacePos = _pstate_surfacePoint + normal * EPSILON;
     float3 lightDir = lights[lightIndex].position - surfacePos;
     float distance = length(lightDir);
 
     lightDir = normalize(lightDir);
+	
+	Ray shadowRay = Ray::create(surfacePos, lightDir);
 
 	// write state
-	pathState[index].lightIndex = lightIndex;
-    pathState[index].shadowRay = Ray::create(surfacePos, lightDir);
-    pathState[index].lightDistance = distance - EPSILON;
+	_set_pstate_lightIndex(lightIndex);
+	_set_pstate_shadowrayOrigin(shadowRay.origin);
+	_set_pstate_shadowrayDirection(shadowRay.direction);
+	_set_pstate_lightDistance(distance - EPSILON);
 }
 
 
@@ -151,11 +153,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 
     for (uint i = 0; i < 16; i++)
 	{
-		uint index = tid + 256 * gid.x + i * stride;
-		//uint index = giseed.x + stride * i;
-		
-		//if (index >= 1280 * 720)
-		//	break;
+		uint index = tid + 256 * gid.x + i * stride; // todo switch to dispatchID
 		
 		// camera moved - resets accumulation buffer and generate new paths
 		if (cam.sampleCounter == 0)
@@ -166,7 +164,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			if (index < 1280 * 720)
 			{
 				if (index == 0)
-					queueCounters.Store(OFFSET_NEWPATH, PATHCOUNT);
+					queueCounters.Store(OFFSET_QC_NEWPATH, PATHCOUNT);
 				
 				float3 color = output[uint3(coord, 0)];
 				output[uint3(coord, 0)] = float4(color, asfloat(0));
@@ -180,29 +178,29 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			seed = float2(frac(index * INVPI), frac(index * PI));
 			pathEliminated = false;
 
-			float3 throughput = pathState[index].throughtput;
-			float3 radiance = pathState[index].radiance;
+			float3 throughput = _pstate_throughput;
+			float3 radiance = _pstate_radiance;
 		
 			// accunmulate from previous path
-			if (!pathState[index].inShadow)
-				radiance += pathState[index].directLight * throughput;
+			if (!_pstate_inShadow)
+				radiance += _pstate_directlight * throughput;
 		
 			// update throughput
-			throughput *= pathState[index].lightThroughput;
+			throughput *= _pstate_lightThroughput;
 
 			// eliminate path with zero throughput
 			if (all(throughput <= 1e-8)) // TODO tweak const
 				pathEliminated = true;
 
 			// eliminate path out of scene
-			if (pathState[index].hitDistance == FLT_MAX)
+			if (_pstate_hitDistance == FLT_MAX)
 			{
 				radiance += float3(0, 1, 1) * throughput * 0.3;
 				pathEliminated = true;
 			}
 			
 			// russian roulette
-			if (pathState[index].pathLength > 200) // todo tweak
+			if (_pstate_pathLength > 200) // todo tweak
 			{
 				float p = max(throughput.x, max(throughput.y, throughput.z));
 				if (rand() > p * 0.004)
@@ -210,10 +208,6 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 
 				throughput *= 1 / p;
 			}
-			
-			
-			//if (pathState[index].pathLength > 0)
-			//	pathEliminated = true;
 
 			// find paths for elimination
 			endPath(radiance, index);
@@ -232,8 +226,8 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 
 			if (NvGetLaneId() == 0) // Todo use of shared memory, and flushing at once
 			{
-				queueCounters.InterlockedAdd(OFFSET_MATUE4, ue4Count, ue4Offset);
-				queueCounters.InterlockedAdd(OFFSET_MATGLASS, glassCount, glassOffset);
+				queueCounters.InterlockedAdd(OFFSET_QC_MATUE4, ue4Count, ue4Offset);
+				queueCounters.InterlockedAdd(OFFSET_QC_MATGLASS, glassCount, glassOffset);
 			}
 
 			broadcast(ue4Offset);
@@ -249,16 +243,14 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			{
 				// pick light and craete shadow ray
 				createShadowRay(index);
-
-				pathState[index].radiance = radiance;
-				pathState[index].throughtput = throughput;
-				pathState[index].pathLength++;
-				pathState[index].inShadow = true;
+				
+				uint pathLength = _pstate_pathLength + 1;
+				
+				_set_pstate_radiance(radiance);
+				_set_pstate_throughput(throughput);
+				_set_pstate_pathLength(pathLength);
+				_set_pstate_inShadow(true);
 			}
 		}
 	}
-
-	//// reset extension and shadow ray queues
-	//if (tid + gid.x == 0)
-	//	queueCounters.Store4(OFFSET_EXTRAY, uint4(0, 0, 0, 0));
 }

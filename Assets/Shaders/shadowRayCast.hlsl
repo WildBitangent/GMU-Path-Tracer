@@ -2,7 +2,7 @@
 
 ////////////////////////////////////////////
 
-RWStructuredBuffer<PathState> pathState : register(u1);
+RWByteAddressBuffer pathState : register(u1);
 RWStructuredBuffer<Queue> queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
 
@@ -143,12 +143,12 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex)
 	// + increase path counter for newPath stage
 	if (tid + gid.x == 0)
 	{
-		uint2 last_newPathCount = queueCounters.Load2(OFFSET_NEWPATH);
-		queueCounters.Store4(OFFSET_NEWPATH, uint4(0, last_newPathCount.x + last_newPathCount.y, 0, 0));
+		uint2 last_newPathCount = queueCounters.Load2(OFFSET_QC_NEWPATH);
+		queueCounters.Store4(OFFSET_QC_NEWPATH, uint4(0, last_newPathCount.x + last_newPathCount.y, 0, 0));
 	}
 	
     uint stride = threadCountX * numGroups;
-	uint queueElementCount = queueCounters.Load(OFFSET_SHADOWRAY);
+	uint queueElementCount = queueCounters.Load(OFFSET_QC_SHADOWRAY);
 
     for (int i = 0; i < 16; i++)
     {
@@ -157,10 +157,13 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex)
             break;
 		
 		uint index = queue[queueIndex].shadowRay;
-
-        Ray ray = pathState[index].shadowRay;
-        float lightDistance = pathState[index].lightDistance;
 		
-		pathState[index].inShadow = rayBVHIntersection(ray, lightDistance);
+		Ray ray;
+		ray.origin = _pstate_shadowrayOrigin;
+		ray.direction = _pstate_shadowrayDirection;
+		float lightDistance = _pstate_lightDistance;
+		
+		bool inShadow = rayBVHIntersection(ray, lightDistance);
+		_set_pstate_inShadow(inShadow);
 	}
 }

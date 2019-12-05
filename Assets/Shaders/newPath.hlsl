@@ -4,7 +4,7 @@
 
 ////////////////////////////////////////////
 
-RWStructuredBuffer<PathState> pathState : register(u1);
+RWByteAddressBuffer pathState : register(u1);
 RWStructuredBuffer<Queue> queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
 
@@ -15,8 +15,8 @@ RWByteAddressBuffer queueCounters : register(u3);
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_DispatchThreadID)
 {
     uint stride = threadCountX * numGroups;
-	uint queueElementCount = queueCounters.Load(OFFSET_NEWPATH);
-	uint lastPath = queueCounters.Load(OFFSET_LASTPATHCNT);;
+	uint queueElementCount = queueCounters.Load(OFFSET_QC_NEWPATH);
+	uint lastPath = queueCounters.Load(OFFSET_QC_LASTPATHCNT);
 	//seed = giseed.xy;
 	
     for (int i = 0; i < 16; i++)
@@ -43,21 +43,16 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 		float2 uv = (coord + jitter) * cam.pixelSize;
 		//float2 uv = (coord) * cam.pixelSize;
 
-        pathState[index].ray = Ray::create(cam.pos, normalize(cam.ulc + uv.x * cam.horizontal - uv.y * cam.vertical));
-        pathState[index].screenCoord = coord;
-        pathState[index].radiance = float3(0, 0, 0);
-        pathState[index].throughtput = float3(1, 1, 1);
-		pathState[index].lightThroughput = float3(1, 1, 1);
-        pathState[index].pathLength = 0;
-		pathState[index].inShadow = true;
+		Ray extRay = Ray::create(cam.pos, normalize(cam.ulc + uv.x * cam.horizontal - uv.y * cam.vertical));
 		
-		//pathState[index].normal = float3(0, 0, 0);
-		//pathState[index].surfacePoint = float3(0, 0, 0);
-		//pathState[index].baryCoord = float3(0, 0, 0);
-		//pathState[index].shadowRay.origin = float3(0, 0, 0);
-		//pathState[index].shadowRay.direction = float3(0, 0, 0);
-		//pathState[index].lightIndex = 0;
-		//pathState[index].lightDistance = 0;
+		_set_pstate_rayOrigin(extRay.origin);
+		_set_pstate_rayDirection(extRay.direction);
+		_set_pstate_screenCoord(coord);
+		_set_pstate_radiance(float3(0, 0, 0));
+		_set_pstate_throughput(float3(1, 1, 1));
+		_set_pstate_lightThroughput(float3(1, 1, 1));
+		_set_pstate_pathLength(0);
+		_set_pstate_inShadow(true);
 
 		// expecting that new path is running always as first
 		queue[queueIndex].extensionRay = index;
@@ -67,7 +62,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 	if (gid.x + tid == 0) // TODO this ain't really scalable for more materials
 	{
 		uint ue4Offset = queueElementCount;
-		uint glassOffset = ue4Offset + queueCounters.Load(OFFSET_MATUE4);
-		queueCounters.Store3(OFFSET_EXTRAY_UE4_OFFSET, uint3(ue4Offset, glassOffset, 0));
+		uint glassOffset = ue4Offset + queueCounters.Load(OFFSET_QC_MATUE4);
+		queueCounters.Store3(OFFSET_QC_EXTRAY_UE4_OFFSET, uint3(ue4Offset, glassOffset, 0));
 	}
 }

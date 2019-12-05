@@ -167,11 +167,10 @@ void Renderer::createBuffers()
 {
 	D3D11_BUFFER_DESC pathStateDescriptor = {};
 	pathStateDescriptor.Usage = D3D11_USAGE_DEFAULT;
-	pathStateDescriptor.ByteWidth = PATHCOUNT * 200;
+	pathStateDescriptor.ByteWidth = PATHCOUNT * 252;
 	pathStateDescriptor.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 	pathStateDescriptor.CPUAccessFlags = 0;
-	pathStateDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	pathStateDescriptor.StructureByteStride = 200;
+	pathStateDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
 	D3D11_BUFFER_DESC queueDescriptor = {};
 	queueDescriptor.Usage = D3D11_USAGE_DEFAULT;
@@ -220,12 +219,13 @@ void Renderer::createBuffers()
 	UAVDescriptor.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
 	UAVDescriptor.Buffer.FirstElement = 0;
 	UAVDescriptor.Buffer.NumElements = PATHCOUNT;
-
-	mDevice->CreateUnorderedAccessView(mPathStateBuffer, &UAVDescriptor, &mPathStateUAV);
 	mDevice->CreateUnorderedAccessView(mQueueBuffer, &UAVDescriptor, &mQueueUAV);
-
+	
 	UAVDescriptor.Format = DXGI_FORMAT_R32_TYPELESS;
 	UAVDescriptor.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_RAW;
+	UAVDescriptor.Buffer.NumElements = pathStateDescriptor.ByteWidth / 4;
+	mDevice->CreateUnorderedAccessView(mPathStateBuffer, &UAVDescriptor, &mPathStateUAV);
+
 	UAVDescriptor.Buffer.NumElements = 8;
 	mDevice->CreateUnorderedAccessView(mQueueCountersBuffer, &UAVDescriptor, &mQueueCountersUAV);
 

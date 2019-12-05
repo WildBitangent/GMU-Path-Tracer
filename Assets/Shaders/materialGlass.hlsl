@@ -13,9 +13,9 @@ struct State
 
 ////////////////////////////////////////////
 
-RWStructuredBuffer<PathState> pathState : register(u1);
+RWByteAddressBuffer pathState : register(u1);
 RWStructuredBuffer<Queue> queue : register(u2);
-globallycoherent RWByteAddressBuffer queueCounters : register(u3);
+RWByteAddressBuffer queueCounters : register(u3);
 
 ////////////////////////////////////////////
 
@@ -49,11 +49,9 @@ float3 glassSample(in State state)
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_DispatchThreadID)
 {
     uint stride = threadCountX * numGroups;
-	uint queueElementCount = queueCounters.Load(OFFSET_MATGLASS);
-	uint extQueueOffset = queueCounters.Load(OFFSET_EXTRAY_GLASS_OFFSET);
-
-	//seed = giseed.xy;
-	
+	uint queueElementCount = queueCounters.Load(OFFSET_QC_MATGLASS);
+	uint extQueueOffset = queueCounters.Load(OFFSET_QC_EXTRAY_GLASS_OFFSET);
+		
     for (int i = 0; i < 16; i++)
     {
         uint queueIndex = tid + 256 * gid.x + i * stride;
@@ -67,23 +65,21 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
         Sample sample;
 
 		// fill the state
-		state.ray = pathState[index].ray;
-		state.normal = pathState[index].normal;
-		state.baseColor = pathState[index].material.baseColor;
+		state.ray.origin = _pstate_rayOrigin;
+		state.ray.direction = _pstate_rayDirection;
+		state.normal = _pstate_normal;
+		state.baseColor = _pstate_matColor;
 		
         sample.bsdfDir = glassSample(state);
         
-		pathState[index].lightThroughput = state.baseColor;
+		_set_pstate_lightThroughput(state.baseColor);
 
 		// create extended ray
-		float3 surfacePoint = pathState[index].surfacePoint;
+		float3 surfacePoint = _pstate_surfacePoint;
         state.ray = Ray::create(surfacePoint + sample.bsdfDir * EPSILON, sample.bsdfDir);
-
-        pathState[index].ray = state.ray;
+		
+		_set_pstate_rayOrigin(state.ray.origin);
+		_set_pstate_rayDirection(state.ray.direction);
 		queue[extQueueOffset + queueIndex].extensionRay = index;
 	}
-	
-	// update extension ray queue count
-	//if (tid + gid.x == 0)
-	//	queueCounters.Store(OFFSET_EXTRAY, extQueueOffset + queueElementCount);
 }

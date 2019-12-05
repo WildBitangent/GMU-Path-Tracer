@@ -12,7 +12,7 @@ struct State
 
 ////////////////////////////////////////////
 
-RWStructuredBuffer<PathState> pathState : register(u1);
+RWByteAddressBuffer pathState : register(u1);
 RWStructuredBuffer<Queue> queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
 
@@ -174,18 +174,21 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex) // TODO does it need
 		uint index = queue[queueIndex].extensionRay;
 		//uint index = queueIndex;
 
-		state.ray = pathState[index].ray;
-
+		state.ray.origin = _pstate_rayOrigin;
+		state.ray.direction = _pstate_rayDirection;
+		
         float distance = rayBVHIntersection(); // TODO maybe traverse more than one path
 
 		// write 
         if (distance < FLT_MAX)
         {
-			pathState[index].surfacePoint = state.hitPoint;
-			pathState[index].baryCoord = state.baryCoord;
-			pathState[index].tri = state.tri;
+			_set_pstate_surfacePoint(state.hitPoint);
+			_set_pstate_baryCoord(state.baryCoord);
+			
+			uint4 tri = uint4(state.tri.vtix, state.tri.materialID);
+			_set_pstate_triangle(tri);
 		}
 		
-		pathState[index].hitDistance = distance;
+		_set_pstate_hitDistance(distance);
 	}
 }

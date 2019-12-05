@@ -7,22 +7,95 @@
 #define INVPI 0.31830988618379067153776752674503
 #define PATHCOUNT 2097152 // 2^21 2M paths TODO define at compilation time
 
-//#define LIGHT float3(4, 8, 8)
-#define LIGHT float3(2,23.5,0)
-#define LIGHT2 float3(0, 4.5, 2)
-#define LIGHTRADIUS 100.0
-#define EMISSION float3(40, 40, 0) * 20
-#define EMISSION2 float3(80, 80, 40)
+// define offsets for types
+#define F4SO 16 * PATHCOUNT
+#define F2SO 8 * PATHCOUNT
+#define F1SO 4 * PATHCOUNT
 
-// queue counters
-#define OFFSET_NEWPATH 0
-#define OFFSET_LASTPATHCNT 4
-#define OFFSET_MATUE4 8
-#define OFFSET_MATGLASS 12
-//#define OFFSET_EXTRAY 16
-#define OFFSET_EXTRAY_UE4_OFFSET 16
-#define OFFSET_EXTRAY_GLASS_OFFSET 20
-#define OFFSET_SHADOWRAY 24
+// path state offsets
+#define OFFSET_P_RAY_ORIGIN				0
+#define OFFSET_P_RAY_DIRECTION			OFFSET_P_RAY_ORIGIN + F4SO
+#define OFFSET_P_MAT_COLOR				OFFSET_P_RAY_DIRECTION + F4SO
+#define OFFSET_P_MAT_METALICROUGHNESS	OFFSET_P_MAT_COLOR + F4SO
+#define OFFSET_P_NORMAL					OFFSET_P_MAT_METALICROUGHNESS + F2SO
+#define OFFSET_P_SURFACEPOINT			OFFSET_P_NORMAL + F4SO
+#define OFFSET_P_BARYCOORD				OFFSET_P_SURFACEPOINT + F4SO
+#define OFFSET_P_HITDISTANCE			OFFSET_P_BARYCOORD + F4SO
+#define OFFSET_P_TRIANGLE				OFFSET_P_HITDISTANCE + F1SO
+
+#define OFFSET_P_SHADOWRAY_ORIGIN		OFFSET_P_TRIANGLE + F4SO
+#define OFFSET_P_SHADOWRAY_DIRECTION	OFFSET_P_SHADOWRAY_ORIGIN + F4SO
+#define OFFSET_P_LIGHT_INDEX			OFFSET_P_SHADOWRAY_DIRECTION + F4SO
+#define OFFSET_P_LIGHT_DISTANCE			OFFSET_P_LIGHT_INDEX + F1SO
+#define OFFSET_P_INSHADOW				OFFSET_P_LIGHT_DISTANCE + F1SO
+
+#define OFFSET_P_RADIANCE				OFFSET_P_INSHADOW + F1SO
+#define OFFSET_P_THROUGHPUT				OFFSET_P_RADIANCE + F4SO
+#define OFFSET_P_LIGHT_THROUGHPUT		OFFSET_P_THROUGHPUT + F4SO
+#define OFFSET_P_DIRECT_LIGHT			OFFSET_P_LIGHT_THROUGHPUT + F4SO
+#define OFFSET_P_PATH_LENGTH			OFFSET_P_DIRECT_LIGHT + F4SO
+#define OFFSET_P_SCREEN_COORD			OFFSET_P_PATH_LENGTH + F1SO
+
+// queue offsets
+#define OFFSET_Q_NEWPATH				0
+#define OFFSET_Q_MAT_UE4				OFFSET_Q_NEWPATH + F1SO
+#define OFFSET_Q_MAT_GLASS				OFFSET_Q_MAT_UE4 + F1SO
+#define OFFSET_Q_EXT_RAY				OFFSET_Q_MAT_GLASS + F1SO
+#define OFFSET_Q_SHADOW_RAY				OFFSET_Q_EXT_RAY + F1SO
+
+// queue counters offsets
+#define OFFSET_QC_NEWPATH				0
+#define OFFSET_QC_LASTPATHCNT			4
+#define OFFSET_QC_MATUE4				8
+#define OFFSET_QC_MATGLASS				12
+#define OFFSET_QC_EXTRAY_UE4_OFFSET		16
+#define OFFSET_QC_EXTRAY_GLASS_OFFSET	20
+#define OFFSET_QC_SHADOWRAY				24
+
+// define getters
+#define GET(what, index, bytes)			(OFFSET_##what + 4 * bytes * index)
+#define _pstate_rayOrigin				asfloat(pathState.Load3(GET(P_RAY_ORIGIN, index, 4)))
+#define _pstate_rayDirection			asfloat(pathState.Load3(GET(P_RAY_DIRECTION, index, 4)))
+#define _pstate_matColor				asfloat(pathState.Load3(GET(P_MAT_COLOR, index, 4)))
+#define _pstate_matMetallicRoughness	asfloat(pathState.Load2(GET(P_MAT_METALICROUGHNESS, index, 2)))
+#define _pstate_normal					asfloat(pathState.Load3(GET(P_NORMAL, index, 4)))
+#define _pstate_surfacePoint			asfloat(pathState.Load3(GET(P_SURFACEPOINT, index, 4)))
+#define _pstate_baryCoord				asfloat(pathState.Load3(GET(P_BARYCOORD, index, 4)))
+#define _pstate_hitDistance				asfloat(pathState.Load(GET(P_HITDISTANCE, index, 1)))
+#define _pstate_triangle				pathState.Load4(GET(P_TRIANGLE, index, 4))
+#define _pstate_shadowrayOrigin			asfloat(pathState.Load3(GET(P_SHADOWRAY_ORIGIN, index, 4)))
+#define _pstate_shadowrayDirection		asfloat(pathState.Load3(GET(P_SHADOWRAY_DIRECTION, index, 4)))
+#define _pstate_lightIndex				pathState.Load(GET(P_LIGHT_INDEX, index, 1))
+#define _pstate_lightDistance			asfloat(pathState.Load(GET(P_LIGHT_DISTANCE, index, 1)))
+#define _pstate_inShadow				pathState.Load(GET(P_INSHADOW, index, 1))
+#define _pstate_radiance				asfloat(pathState.Load3(GET(P_RADIANCE, index, 4)))
+#define _pstate_throughput				asfloat(pathState.Load3(GET(P_THROUGHPUT, index, 4)))
+#define _pstate_lightThroughput			asfloat(pathState.Load3(GET(P_LIGHT_THROUGHPUT, index, 4)))
+#define _pstate_directlight				asfloat(pathState.Load3(GET(P_DIRECT_LIGHT, index, 4)))
+#define _pstate_pathLength				pathState.Load(GET(P_PATH_LENGTH, index, 1))
+#define _pstate_screenCoord				pathState.Load2(GET(P_SCREEN_COORD, index, 2))
+
+// define setters
+#define _set_pstate_rayOrigin(val)				(pathState.Store3(GET(P_RAY_ORIGIN, index, 4), asuint(val)))
+#define _set_pstate_rayDirection(val)			(pathState.Store3(GET(P_RAY_DIRECTION, index, 4), asuint(val)))
+#define _set_pstate_matColor(val)				(pathState.Store3(GET(P_MAT_COLOR, index, 4), asuint(val)))
+#define _set_pstate_matMetallicRoughness(val)	(pathState.Store2(GET(P_MAT_METALICROUGHNESS, index, 2), asuint(val)))
+#define _set_pstate_normal(val)					(pathState.Store3(GET(P_NORMAL, index, 4), asuint(val)))
+#define _set_pstate_surfacePoint(val)			(pathState.Store3(GET(P_SURFACEPOINT, index, 4), asuint(val)))
+#define _set_pstate_baryCoord(val)				(pathState.Store3(GET(P_BARYCOORD, index, 4), asuint(val)))
+#define _set_pstate_hitDistance(val)			(pathState.Store(GET(P_HITDISTANCE, index, 1), asuint(val)))
+#define _set_pstate_triangle(val)				(pathState.Store4(GET(P_TRIANGLE, index, 4), val))
+#define _set_pstate_shadowrayOrigin(val)		(pathState.Store3(GET(P_SHADOWRAY_ORIGIN, index, 4), asuint(val)))
+#define _set_pstate_shadowrayDirection(val)		(pathState.Store3(GET(P_SHADOWRAY_DIRECTION, index, 4), asuint(val)))
+#define _set_pstate_lightIndex(val)				(pathState.Store(GET(P_LIGHT_INDEX, index, 1), val))
+#define _set_pstate_lightDistance(val)			(pathState.Store(GET(P_LIGHT_DISTANCE, index, 1), asuint(val)))
+#define _set_pstate_inShadow(val)				(pathState.Store(GET(P_INSHADOW, index, 1), val))
+#define _set_pstate_radiance(val)				(pathState.Store3(GET(P_RADIANCE, index, 4), asuint(val)))
+#define _set_pstate_throughput(val)				(pathState.Store3(GET(P_THROUGHPUT, index, 4), asuint(val)))
+#define _set_pstate_lightThroughput(val)		(pathState.Store3(GET(P_LIGHT_THROUGHPUT, index, 4), asuint(val)))
+#define _set_pstate_directlight(val)			(pathState.Store3(GET(P_DIRECT_LIGHT, index, 4), asuint(val)))
+#define _set_pstate_pathLength(val)				(pathState.Store(GET(P_PATH_LENGTH, index, 1), val))
+#define _set_pstate_screenCoord(val)			(pathState.Store2(GET(P_SCREEN_COORD, index, 2), val))
 
 #define NV_SHADER_EXTN_SLOT u5
 
@@ -91,7 +164,7 @@ struct TriangleParameters
 
 struct Material
 {
-    float4 baseColor;
+    float3 baseColor;
     float metallic;
     float roughness;
 };
@@ -172,24 +245,24 @@ struct PathState // TODO prob align all flt3
 {
 	Ray ray;
 	Material material;
-	float3 normal;
-	float3 surfacePoint; 
-	float3 baryCoord;
+	float4 normal;
+	float4 surfacePoint; 
+	float4 baryCoord;
 	float hitDistance;
-	Triangle tri; // 26F
+	Triangle tri; // 31F
 
 	Ray shadowRay;
 	int lightIndex;
 	float lightDistance;
-	int inShadow; // default set to TRUE in controll //9
+	int inShadow; // default set to TRUE in controll //11F
 
-	float3 radiance;
-	float3 throughtput;
-	float3 lightThroughput;
-	float3 directLight;
+	float4 radiance;
+	float4 throughtput;
+	float4 lightThroughput;
+	float4 directLight;
 	uint pathLength;
-	uint2 screenCoord; //15
-}; // 26 + 9 + 15 = 50F / 200B
+	uint2 screenCoord; // 19F
+}; // 31 + 11 + 19 = 61F / 244B //488 MB
 
 struct Queue
 {
