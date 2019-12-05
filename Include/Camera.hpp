@@ -35,6 +35,6 @@ private:
 	float mHalfHeight;
 
 	float mPitch = {}; // todo maybe use radians as base?
-	float mYaw = 290;
+	float mYaw = 270;
 	// float mYaw = 356;
 };

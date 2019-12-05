@@ -9,8 +9,8 @@ cbuffer Material : register(b1)
 };
 
 ////////////////////////////////////////////
-globallycoherent RWTexture2DArray<float4> output : register(u0);
-RWStructuredBuffer<PathState> pathState : register(u1); // TODO registers
+RWTexture2DArray<float4> output : register(u0); // TODO probably globally coherent
+RWStructuredBuffer<PathState> pathState : register(u1);
 RWStructuredBuffer<Queue> queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
 
@@ -60,8 +60,8 @@ void endPath(in float3 radiance, in uint index)
 		float3 t = sum + y;
 	
 		// write out
-		//output[uint3(coord, 0)] = float4(t / sampleCount, asfloat(sampleCount)); // probably race condition, but nothing I can do with it atm
-		output[uint3(coord, 0)] = float4(radiance, asfloat(sampleCount)); // probably race condition, but nothing I can do with it atm
+		output[uint3(coord, 0)] = float4(t / sampleCount, asfloat(sampleCount)); // probably race condition, but nothing I can do with it atm
+		//output[uint3(coord, 0)] = float4(radiance, asfloat(sampleCount)); // probably race condition, but nothing I can do with it atm
 		output[uint3(coord, 1)] = float4((t - sum) - y, 0);
 		AllMemoryBarrier();
 		queue[offset + qindex].newPath = index;
@@ -120,7 +120,6 @@ uint setMaterialHitProperties(in uint index)
     pathState[index].material.baseColor = material.baseColor;
     pathState[index].material.metallic = material.metallic;
     pathState[index].material.roughness = material.roughness;
-	//pathState[index].normal = normal;
 	pathState[index].normal = normal;
 
     return material.materialType;
@@ -149,22 +148,6 @@ void createShadowRay(in uint index)
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_DispatchThreadID)
 {
     uint stride = threadCountX * numGroups;	
-	
-	//for (uint i = 0; i < 16; i++)
-	//{
-	//	uint index = tid + 256 * gid.x + i * stride;
-	//	seed = float2(frac(index * INVPI), frac(index * PI));
-	//	index += gid.x * 7;
-	//	//for (uint x = 0; x < 210; x++)
-	//	//	createShadowRay(x * 143);
-		
-	//	uint width = 1280;
-	//	uint2 coord = uint2(index % 1280, index / 1280);
-	//	output[uint3(coord.x, coord.y % 720, 0)] = float4(coord.x / 1280.0, coord.y / (720.0 * 4), 0, asfloat(0));
-	//	AllMemoryBarrier();
-	//}
-	
-	//return;
 
     for (uint i = 0; i < 16; i++)
 	{
@@ -214,12 +197,12 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			// eliminate path out of scene
 			if (pathState[index].hitDistance == FLT_MAX)
 			{
-				radiance = float3(1, 1, 1) * throughput * 0.3;
+				radiance += float3(0, 1, 1) * throughput * 0.3;
 				pathEliminated = true;
 			}
 			
 			// russian roulette
-			if (pathState[index].pathLength > 20) // todo tweak
+			if (pathState[index].pathLength > 200) // todo tweak
 			{
 				float p = max(throughput.x, max(throughput.y, throughput.z));
 				if (rand() > p * 0.004)
@@ -229,12 +212,11 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			}
 			
 			
-			if (pathState[index].pathLength > 0)
-				pathEliminated = true;
+			//if (pathState[index].pathLength > 0)
+			//	pathEliminated = true;
 
 			// find paths for elimination
-			if (any(pathEliminated))
-				endPath(radiance, index);
+			endPath(radiance, index);
 
 			// enqueue materials
 			int materialType = pathEliminated ? -1 : setMaterialHitProperties(index);

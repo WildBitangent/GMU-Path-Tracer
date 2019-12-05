@@ -249,7 +249,7 @@ void Renderer::update(float dt)
 	mScene.update(dt);
 	
 	mContext->UpdateSubresource(mCameraBuffer, 0, nullptr, mScene.mCamera.getBuffer(), 0, 0);
-	//mGUI.update();
+	mGUI.update();
 }
 
 void Renderer::draw()
@@ -281,29 +281,7 @@ void Renderer::draw()
 	mContext->CSSetConstantBuffers(0, uniforms.size(), uniforms.data());
 	mContext->CSSetUnorderedAccessViews(0, UAVs.size(), UAVs.data(), nullptr);
 	mContext->CSSetSamplers(0, 1, &mScene.mSampler);
-
-
-	// static size_t first = 0;
-	// if (first++ < 2)
-	// {
-	// 	mContext->CSSetShader(mShaderLogic, nullptr, 0);
-	// 	mContext->Dispatch(512, 1, 1);
-	// 	
-	// 	mContext->CSSetShader(mShaderNewPath, nullptr, 0);
-	// 	mContext->Dispatch(512, 1, 1);
-	// 	
-	// 	mContext->CSSetShader(mShaderMaterialUE4, nullptr, 0); // TODO maybe pick less thread groups since materials will be most likely uniformly distributed
-	// 	mContext->Dispatch(512, 1, 1);
-	// 	
-	// 	mContext->CSSetShader(mShaderMaterialGlass, nullptr, 0);
-	// 	mContext->Dispatch(512, 1, 1); 
-	//
-	// 	mContext->CSSetShader(mShaderExtensionRay, nullptr, 0);
-	// 	mContext->Dispatch(512, 1, 1);
-	// 	
-	// 	mContext->CSSetShader(mShaderShadowRay, nullptr, 0);
-	// 	mContext->Dispatch(512, 1, 1);
-	// }
+	
 
 	mContext->CSSetShader(mShaderLogic, nullptr, 0);
 	mContext->Dispatch(512, 1, 1);
@@ -335,7 +313,7 @@ void Renderer::draw()
 	mContext->Draw(4, 0);
 	mContext->PSSetShaderResources(0, 1, nullSRV.data());
 
-	//mGUI.render();
+	mGUI.render();
 	
 	mSwapChain->Present(0, 0);
 

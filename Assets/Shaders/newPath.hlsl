@@ -40,8 +40,8 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 		//coord = uint2(newIndex % width, (newIndex / width) % height);
 		
 		float2 jitter = float2(rand(), rand()) * 2 - 1;
-		//float2 uv = (coord + jitter) * cam.pixelSize;
-		float2 uv = (coord) * cam.pixelSize;
+		float2 uv = (coord + jitter) * cam.pixelSize;
+		//float2 uv = (coord) * cam.pixelSize;
 
         pathState[index].ray = Ray::create(cam.pos, normalize(cam.ulc + uv.x * cam.horizontal - uv.y * cam.vertical));
         pathState[index].screenCoord = coord;
