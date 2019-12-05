@@ -15,7 +15,7 @@ struct State
 
 RWStructuredBuffer<PathState> pathState : register(u1);
 RWStructuredBuffer<Queue> queue : register(u2);
-RWByteAddressBuffer queueCounters : register(u3);
+globallycoherent RWByteAddressBuffer queueCounters : register(u3);
 
 ////////////////////////////////////////////
 
@@ -50,9 +50,9 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 {
     uint stride = threadCountX * numGroups;
 	uint queueElementCount = queueCounters.Load(OFFSET_MATGLASS);
-	uint extQueueOffset = queueCounters.Load(OFFSET_EXTRAY);
+	uint extQueueOffset = queueCounters.Load(OFFSET_EXTRAY_GLASS_OFFSET);
 
-	seed = giseed.xy;
+	//seed = giseed.xy;
 	
     for (int i = 0; i < 16; i++)
     {
@@ -60,7 +60,8 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
         if (queueIndex >= queueElementCount)
             break;
 		
-		int index = queue[queueIndex].materialGlass;
+		seed = float2(frac(queueIndex * INVPI), frac(queueIndex * PI));
+		uint index = queue[queueIndex].materialGlass;
 
         State state;
         Sample sample;
@@ -83,6 +84,6 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 	}
 	
 	// update extension ray queue count
-	if (tid + gid.x == 0)
-		queueCounters.Store(OFFSET_EXTRAY, extQueueOffset + queueElementCount);
+	//if (tid + gid.x == 0)
+	//	queueCounters.Store(OFFSET_EXTRAY, extQueueOffset + queueElementCount);
 }

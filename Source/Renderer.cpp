@@ -54,7 +54,7 @@ Renderer::Renderer(HWND hwnd, Resolution resolution)
 	
 	
 	// todo better adapter selection
-	if (const auto result = D3D11CreateDeviceAndSwapChain(adapters.at(adapters.size() - 3), D3D_DRIVER_TYPE_UNKNOWN, nullptr, D3D11_CREATE_DEVICE_DEBUG, nullptr, 0,
+	if (const auto result = D3D11CreateDeviceAndSwapChain(adapters.at(adapters.size() - 2), D3D_DRIVER_TYPE_UNKNOWN, nullptr, D3D11_CREATE_DEVICE_DEBUG, nullptr, 0,
 		D3D11_SDK_VERSION, &swapChainDesc, &mSwapChain, &mDevice, nullptr, &mContext); result != S_OK)
 		throw std::runtime_error(fmt::format("Failed to create device with Swapchain. ERR: {}", result));
 
@@ -183,14 +183,36 @@ void Renderer::createBuffers()
 
 	D3D11_BUFFER_DESC queueCountersDescriptor = {};
 	queueCountersDescriptor.Usage = D3D11_USAGE_DEFAULT;
-	queueCountersDescriptor.ByteWidth = 20;
+	queueCountersDescriptor.ByteWidth = 32;
 	queueCountersDescriptor.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 	queueCountersDescriptor.CPUAccessFlags = 0;
 	queueCountersDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+
+	D3D11_BUFFER_DESC lightDescriptor = {};
+	lightDescriptor.Usage = D3D11_USAGE_DEFAULT;
+	lightDescriptor.ByteWidth = 56;
+	lightDescriptor.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	lightDescriptor.CPUAccessFlags = 0;
+	lightDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	lightDescriptor.StructureByteStride = 28;
+
+	float data[] = {
+		2.f, 23.5f, 0.f, // pos
+		800.f, 800.f, 0.f, // emission
+		100.f, // radius
+		
+		0.f, 4.5f, 2.f, // pos
+		80.f, 80.f, 40.f, // emission
+		100.f, // radius
+	};
+
+	D3D11_SUBRESOURCE_DATA dataInit = {};
+	dataInit.pSysMem = data;
 	
 	mDevice->CreateBuffer(&pathStateDescriptor, nullptr, &mPathStateBuffer);
 	mDevice->CreateBuffer(&queueDescriptor, nullptr, &mQueueBuffer);
 	mDevice->CreateBuffer(&queueCountersDescriptor, nullptr, &mQueueCountersBuffer);
+	mDevice->CreateBuffer(&lightDescriptor, &dataInit, &mLightBuffer.buffer); // todo change
 
 	// views
 	D3D11_UNORDERED_ACCESS_VIEW_DESC UAVDescriptor = {};
@@ -204,22 +226,30 @@ void Renderer::createBuffers()
 
 	UAVDescriptor.Format = DXGI_FORMAT_R32_TYPELESS;
 	UAVDescriptor.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_RAW;
-	UAVDescriptor.Buffer.NumElements = 5;
+	UAVDescriptor.Buffer.NumElements = 8;
 	mDevice->CreateUnorderedAccessView(mQueueCountersBuffer, &UAVDescriptor, &mQueueCountersUAV);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDescriptor = {};
+	SRVDescriptor.Format = DXGI_FORMAT_UNKNOWN;
+	SRVDescriptor.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	SRVDescriptor.Buffer.FirstElement = 0;
+	SRVDescriptor.Buffer.NumElements = 2;
+
+	mDevice->CreateShaderResourceView(mLightBuffer.buffer, &SRVDescriptor, &mLightBuffer.srv);
 }
 
 void Renderer::update(float dt)
 {
-	mScene.update(dt);
-
 	if (Input::getInstance().keyActive('R'))
 	{
 		reloadShader();
-		mScene.mCamera.getBuffer()->iterationCounter = 0;
+		mScene.mCamera.getBuffer()->iterationCounter = -1; // will be updated in camera to the value 0
 	}
 	
+	mScene.update(dt);
+	
 	mContext->UpdateSubresource(mCameraBuffer, 0, nullptr, mScene.mCamera.getBuffer(), 0, 0);
-	mGUI.update();
+	//mGUI.update();
 }
 
 void Renderer::draw()
@@ -253,48 +283,45 @@ void Renderer::draw()
 	mContext->CSSetSamplers(0, 1, &mScene.mSampler);
 
 
-	static size_t first = 0;
-	if (first++ < 2)
-	{
-		mContext->CSSetShader(mShaderLogic, nullptr, 0);
-		mContext->Dispatch(512, 1, 1);
-		
-		mContext->CSSetShader(mShaderNewPath, nullptr, 0);
-		mContext->Dispatch(512, 1, 1);
-		
-		// mContext->CSSetShader(mShaderMaterialUE4, nullptr, 0); // TODO maybe pick less thread groups since materials will be most likely uniformly distributed
-		// mContext->Dispatch(512, 1, 1);
-		//
-		// mContext->CSSetShader(mShaderMaterialGlass, nullptr, 0);
-		// mContext->Dispatch(512, 1, 1); 
+	// static size_t first = 0;
+	// if (first++ < 2)
+	// {
+	// 	mContext->CSSetShader(mShaderLogic, nullptr, 0);
+	// 	mContext->Dispatch(512, 1, 1);
+	// 	
+	// 	mContext->CSSetShader(mShaderNewPath, nullptr, 0);
+	// 	mContext->Dispatch(512, 1, 1);
+	// 	
+	// 	mContext->CSSetShader(mShaderMaterialUE4, nullptr, 0); // TODO maybe pick less thread groups since materials will be most likely uniformly distributed
+	// 	mContext->Dispatch(512, 1, 1);
+	// 	
+	// 	mContext->CSSetShader(mShaderMaterialGlass, nullptr, 0);
+	// 	mContext->Dispatch(512, 1, 1); 
+	//
+	// 	mContext->CSSetShader(mShaderExtensionRay, nullptr, 0);
+	// 	mContext->Dispatch(512, 1, 1);
+	// 	
+	// 	mContext->CSSetShader(mShaderShadowRay, nullptr, 0);
+	// 	mContext->Dispatch(512, 1, 1);
+	// }
 
-		if (first == 1)
-		{
-			mContext->CSSetShader(mShaderExtensionRay, nullptr, 0);
-			mContext->Dispatch(512, 1, 1);
-		}
-		
-		// mContext->CSSetShader(mShaderShadowRay, nullptr, 0);
-		// mContext->Dispatch(512, 1, 1);
-	}
+	mContext->CSSetShader(mShaderLogic, nullptr, 0);
+	mContext->Dispatch(512, 1, 1);
+	
+	mContext->CSSetShader(mShaderNewPath, nullptr, 0);
+	mContext->Dispatch(512, 1, 1);
+	
+	mContext->CSSetShader(mShaderMaterialUE4, nullptr, 0); // TODO maybe pick less thread groups since materials will be most likely uniformly distributed
+	mContext->Dispatch(512, 1, 1);
+	
+	mContext->CSSetShader(mShaderMaterialGlass, nullptr, 0);
+	mContext->Dispatch(512, 1, 1); 
 
-	// mContext->CSSetShader(mShaderLogic, nullptr, 0);
-	// mContext->Dispatch(512, 1, 1);
-	//
-	// mContext->CSSetShader(mShaderNewPath, nullptr, 0);
-	// mContext->Dispatch(512, 1, 1);
-	//
-	// mContext->CSSetShader(mShaderMaterialUE4, nullptr, 0); // TODO maybe pick less thread groups since materials will be most likely uniformly distributed
-	// mContext->Dispatch(512, 1, 1);
-	//
-	// mContext->CSSetShader(mShaderMaterialGlass, nullptr, 0);
-	// mContext->Dispatch(512, 1, 1); 
-	//
-	// mContext->CSSetShader(mShaderExtensionRay, nullptr, 0);
-	// mContext->Dispatch(512, 1, 1);
-	//
-	// mContext->CSSetShader(mShaderShadowRay, nullptr, 0);
-	// mContext->Dispatch(512, 1, 1);
+	mContext->CSSetShader(mShaderExtensionRay, nullptr, 0);
+	mContext->Dispatch(512, 1, 1);
+	
+	mContext->CSSetShader(mShaderShadowRay, nullptr, 0);
+	mContext->Dispatch(512, 1, 1);
 
 	
 	mContext->CSSetShaderResources(0, SRVs.size(), nullSRV.data());
@@ -308,7 +335,7 @@ void Renderer::draw()
 	mContext->Draw(4, 0);
 	mContext->PSSetShaderResources(0, 1, nullSRV.data());
 
-	mGUI.render();
+	//mGUI.render();
 	
 	mSwapChain->Present(0, 0);
 

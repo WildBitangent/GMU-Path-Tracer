@@ -78,14 +78,14 @@ bool rayBVHIntersection(in Ray ray, float lightDistance)
 
             if (node.isLeaf)
             {
-                for (uint i = node.leftIndex; i < node.rightIndex; i++)
+                for (int i = node.leftIndex; i < node.rightIndex; i++)
                 {
                     uint3 ii = indices[i].vtix;
                     float3 v0 = vertices[ii.x];
                     float3 v1 = vertices[ii.y];
                     float3 v2 = vertices[ii.z];
 
-                    float distance;
+                    float distance = FLT_MAX;
                     if (rayTriangleIntersection(ray, v0, v1, v2, distance) && distance < lightDistance)
                         //if (materialProp[indices[i].materialID].materialType == 0)
                         return true;
@@ -139,6 +139,14 @@ bool rayBVHIntersection(in Ray ray, float lightDistance)
 [numthreads(threadCountX, 1, 1)]
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex)
 {
+	// reset queues from previous stages (newpath, ue4, glass)
+	// + increase path counter for newPath stage
+	if (tid + gid.x == 0)
+	{
+		uint2 last_newPathCount = queueCounters.Load2(OFFSET_NEWPATH);
+		queueCounters.Store4(OFFSET_NEWPATH, uint4(0, last_newPathCount.x + last_newPathCount.y, 0, 0));
+	}
+	
     uint stride = threadCountX * numGroups;
 	uint queueElementCount = queueCounters.Load(OFFSET_SHADOWRAY);
 
@@ -148,15 +156,11 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex)
         if (queueIndex >= queueElementCount)
             break;
 		
-		int index = queue[queueIndex].shadowRay;
+		uint index = queue[queueIndex].shadowRay;
 
-        Ray ray = pathState[index].ray;
+        Ray ray = pathState[index].shadowRay;
         float lightDistance = pathState[index].lightDistance;
 		
-        pathState[index].inShadow = rayBVHIntersection(ray, lightDistance);
-    }
-
-	// reset queues from previous stages (newpath, ue4, glass)
-	if (tid + gid.x == 0)
-		queueCounters.Store3(OFFSET_NEWPATH, uint3(0, 0, 0));
+		pathState[index].inShadow = rayBVHIntersection(ray, lightDistance);
+	}
 }

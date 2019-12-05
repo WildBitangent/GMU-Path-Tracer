@@ -6,6 +6,7 @@
 #include "UniqueDX11.hpp"
 #include "Util.hpp"
 #include <assimp/material.h>
+#include <mutex>
 
 
 struct alignas(16) MaterialProperty // TODO CBUFFER

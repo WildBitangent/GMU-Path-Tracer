@@ -9,10 +9,10 @@ cbuffer Material : register(b1)
 };
 
 ////////////////////////////////////////////
-RWTexture2DArray<float4> output : register(u0);
+globallycoherent RWTexture2DArray<float4> output : register(u0);
 RWStructuredBuffer<PathState> pathState : register(u1); // TODO registers
 RWStructuredBuffer<Queue> queue : register(u2);
-globallycoherent RWByteAddressBuffer queueCounters : register(u3);
+RWByteAddressBuffer queueCounters : register(u3);
 
 StructuredBuffer<BVHNode> tree : register(t0);
 StructuredBuffer<Triangle> indices : register(t1);
@@ -27,47 +27,52 @@ SamplerState samplerState : register(s0);
 
 ////////////////////////////////////////////
 
+static bool pathEliminated;
+
 void endPath(in float3 radiance, in uint index)
-{
-    radiance = saturate(radiance);
+{	
+	// write to the newpath queue
+	uint ballot = NvBallot(pathEliminated);
+	uint count = countbits(ballot);
+	uint offset = 0;
+	uint qindex = NvWaveMultiPrefixExclusiveAdd(1, ballot);
 
-    uint2 coord = pathState[index].screenCoord;
-
-    float3 pixel = output[uint3(coord, 0)].rgb;
-    uint pathCount = asuint(output[uint3(coord, 0)].a);
-
-	// kahan summation
-    float3 sum = pixel * pathCount++;
-    float3 c = output[uint3(coord, 1)];
-		
-    float3 y = radiance - c;
-    float3 t = sum + y;
-	
-    // write out
-    output[uint3(coord, 0)] = float4(t / (pathCount), asfloat(pathCount)); // probably race condition, but nothing I can do with it atm
-	output[uint3(coord, 1)] = float4((t - sum) - y, 0);
-	
-	//write to the newpath qeueu
-    uint activeThreads = NvActiveThreads();
-    uint count = countbits(activeThreads);
-    uint offset = 0;
-    uint qindex = NvWaveMultiPrefixExclusiveAdd(1, activeThreads);
-
-	if (NvGetLaneId() == firstbitlow(activeThreads))
+	if (NvGetLaneId() == 0)
 		queueCounters.InterlockedAdd(OFFSET_NEWPATH, count, offset);
-
+	
 	broadcast(offset);
 	
-	//output[uint3(min(1279, (offset + qindex) % 1280), min(719, (offset + qindex) / 1280), 0)] = float4(1, 0.5, 0, 1);
+	// only threads in warp with path being eliminated
+	if (pathEliminated)
+	{
+		radiance = saturate(radiance);
 
-	queue[offset + qindex].newPath = index;
+		uint2 coord = pathState[index].screenCoord;
+
+		float3 pixel = output[uint3(coord, 0)].rgb;
+		uint sampleCount = asuint(output[uint3(coord, 0)].a);
+
+		// kahan summation
+		float3 sum = pixel * sampleCount++;
+		float3 c = output[uint3(coord, 1)];
+		
+		float3 y = radiance - c;
+		float3 t = sum + y;
+	
+		// write out
+		//output[uint3(coord, 0)] = float4(t / sampleCount, asfloat(sampleCount)); // probably race condition, but nothing I can do with it atm
+		output[uint3(coord, 0)] = float4(radiance, asfloat(sampleCount)); // probably race condition, but nothing I can do with it atm
+		output[uint3(coord, 1)] = float4((t - sum) - y, 0);
+		AllMemoryBarrier();
+		queue[offset + qindex].newPath = index;
+	}
 }
 
 uint setMaterialHitProperties(in uint index)
 {
     uint3 indices = pathState[index].tri.vtix;
     uint materialID = pathState[index].tri.materialID;
-    uint3 baryCoord = pathState[index].baryCoord;
+    float3 baryCoord = pathState[index].baryCoord;
 
     float2 t0 = triParams[indices.x].texCoord;
     float2 t1 = triParams[indices.y].texCoord;
@@ -115,127 +120,163 @@ uint setMaterialHitProperties(in uint index)
     pathState[index].material.baseColor = material.baseColor;
     pathState[index].material.metallic = material.metallic;
     pathState[index].material.roughness = material.roughness;
+	//pathState[index].normal = normal;
+	pathState[index].normal = normal;
 
     return material.materialType;
 }
 
 void createShadowRay(in uint index)
 {
+	uint lightIndex = uint(rand() * 2); // TODO change: 2 = num of lights
+	
 	// set shadow ray
-    Light light;
-    uint lightIndex = uint(rand() * 2); // TODO change: 2 = num of lights
-
-    if (lightIndex == 0)
-    {
-        light.position = LIGHT;
-        light.emission = EMISSION;
-        light.radius = LIGHTRADIUS;
-    }
-    else
-    {
-        light.position = LIGHT2;
-        light.emission = EMISSION2;
-        light.radius = LIGHTRADIUS;
-    }
-
     float3 normal = pathState[index].normal;
     float3 surfacePos = pathState[index].surfacePoint + normal * EPSILON;
-    float3 lightDir = light.position - surfacePos;
+    float3 lightDir = lights[lightIndex].position - surfacePos;
     float distance = length(lightDir);
 
     lightDir = normalize(lightDir);
 
 	// write state
-    pathState[index].lightIndex = lightIndex;
+	pathState[index].lightIndex = lightIndex;
     pathState[index].shadowRay = Ray::create(surfacePos, lightDir);
     pathState[index].lightDistance = distance - EPSILON;
-    pathState[index].inShadow = false;
 }
 
 
 [numthreads(threadCountX, 1, 1)]
-void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_DispatchThreadID) // TODO REWRITE TO NON TERMINATING THREADS
+void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_DispatchThreadID)
 {
-    uint stride = threadCountX * numGroups;
-	seed = giseed.xy;
-
-    for (uint i = 0; i < 16; i++) // TODO prob less branching (remove all the continues)
-    {
-        uint index = tid + 256 * gid.x + i * stride;
-
-        float3 throughput = pathState[index].throughtput;
-        float3 radiance = pathState[index].radiance;
+    uint stride = threadCountX * numGroups;	
+	
+	//for (uint i = 0; i < 16; i++)
+	//{
+	//	uint index = tid + 256 * gid.x + i * stride;
+	//	seed = float2(frac(index * INVPI), frac(index * PI));
+	//	index += gid.x * 7;
+	//	//for (uint x = 0; x < 210; x++)
+	//	//	createShadowRay(x * 143);
 		
-		// accunmulate from previous path
-        if (!pathState[index].inShadow) 
-            radiance += pathState[index].directLight * throughput;
+	//	uint width = 1280;
+	//	uint2 coord = uint2(index % 1280, index / 1280);
+	//	output[uint3(coord.x, coord.y % 720, 0)] = float4(coord.x / 1280.0, coord.y / (720.0 * 4), 0, asfloat(0));
+	//	AllMemoryBarrier();
+	//}
+	
+	//return;
 
-		// eliminate path with zero throughput
-        if (all(throughput < 1e-8)) // TODO tweak const
-        {
-            endPath(radiance, index);
-            continue;
-        }
-
-		// eliminate path out of scene
-        if (pathState[index].hitDistance == FLT_MAX)
-        {
-            radiance += float3(1, 1, 1) * throughput * 0.3;
-            endPath(radiance, index);
-            continue;
-        }
-
-		// update throughput
-        throughput *= pathState[index].lightThroughput;
-
-		// enqueue materials
-        uint materialType = setMaterialHitProperties(index);
-        uint ue4Ballot = NvBallot(materialType == 0);
-        uint glassBallot = NvBallot(materialType == 1);
-        uint ue4Index = NvWaveMultiPrefixExclusiveAdd(1, ue4Ballot);
-        uint glassIndex = NvWaveMultiPrefixExclusiveAdd(1, glassBallot);
-        
-        uint ue4Count = countbits(ue4Ballot);
-        uint glassCount = countbits(glassBallot);
-        uint ue4Offset = 0;
-        uint glassOffset = 0;
-
-        if (NvGetLaneId() == firstbitlow(NvActiveThreads())) // Todo use of shared memory, and flushing at once
-        {
-            queueCounters.InterlockedAdd(OFFSET_MATUE4, ue4Count, ue4Offset);
-			queueCounters.InterlockedAdd(OFFSET_MATGLASS, glassCount, glassOffset);
+    for (uint i = 0; i < 16; i++)
+	{
+		uint index = tid + 256 * gid.x + i * stride;
+		//uint index = giseed.x + stride * i;
+		
+		//if (index >= 1280 * 720)
+		//	break;
+		
+		// camera moved - resets accumulation buffer and generate new paths
+		if (cam.sampleCounter == 0)
+		{
+			uint width = 1280;
+			uint2 coord = uint2(index % width, index / width);
+			
+			if (index < 1280 * 720)
+			{
+				if (index == 0)
+					queueCounters.Store(OFFSET_NEWPATH, PATHCOUNT);
+				
+				float3 color = output[uint3(coord, 0)];
+				output[uint3(coord, 0)] = float4(color, asfloat(0));
+				output[uint3(coord, 1)] = float4(0, 0, 0, 0);
+			}
+			
+			queue[index].newPath = index;
 		}
+		else
+		{
+			seed = float2(frac(index * INVPI), frac(index * PI));
+			pathEliminated = false;
 
-        broadcast(ue4Offset);
-        broadcast(glassOffset);
+			float3 throughput = pathState[index].throughtput;
+			float3 radiance = pathState[index].radiance;
+		
+			// accunmulate from previous path
+			if (!pathState[index].inShadow)
+				radiance += pathState[index].directLight * throughput;
+		
+			// update throughput
+			throughput *= pathState[index].lightThroughput;
 
-        if (materialType == 0)
-			queue[ue4Offset + ue4Index].materialUE4 = index;
-        else
-			queue[glassOffset + glassIndex].materialGlass = index;
+			// eliminate path with zero throughput
+			if (all(throughput <= 1e-8)) // TODO tweak const
+				pathEliminated = true;
 
-		// pick light and craete shadow ray
-        createShadowRay(index);
+			// eliminate path out of scene
+			if (pathState[index].hitDistance == FLT_MAX)
+			{
+				radiance = float3(1, 1, 1) * throughput * 0.3;
+				pathEliminated = true;
+			}
+			
+			// russian roulette
+			if (pathState[index].pathLength > 20) // todo tweak
+			{
+				float p = max(throughput.x, max(throughput.y, throughput.z));
+				if (rand() > p * 0.004)
+					pathEliminated = true;
 
-		// russian roulette
-        if (pathState[index].pathLength > 100)
-        {
-            float p = max(throughput.x, max(throughput.y, throughput.z));
-            if (rand() > p * 0.004)
-            {
-                endPath(radiance, index);
-                continue;
-            }
+				throughput *= 1 / p;
+			}
+			
+			
+			if (pathState[index].pathLength > 0)
+				pathEliminated = true;
 
-            throughput *= 1 / p;
-        }
+			// find paths for elimination
+			if (any(pathEliminated))
+				endPath(radiance, index);
 
-        pathState[index].radiance = radiance;
-        pathState[index].throughtput = throughput;
-		pathState[index].pathLength++;
+			// enqueue materials
+			int materialType = pathEliminated ? -1 : setMaterialHitProperties(index);
+			uint ue4Ballot = NvBallot(materialType == 0);
+			uint glassBallot = NvBallot(materialType == 1);
+			uint ue4Index = NvWaveMultiPrefixExclusiveAdd(1, ue4Ballot);
+			uint glassIndex = NvWaveMultiPrefixExclusiveAdd(1, glassBallot);
+        
+			uint ue4Count = countbits(ue4Ballot);
+			uint glassCount = countbits(glassBallot);
+			uint ue4Offset = 0;
+			uint glassOffset = 0;
+
+			if (NvGetLaneId() == 0) // Todo use of shared memory, and flushing at once
+			{
+				queueCounters.InterlockedAdd(OFFSET_MATUE4, ue4Count, ue4Offset);
+				queueCounters.InterlockedAdd(OFFSET_MATGLASS, glassCount, glassOffset);
+			}
+
+			broadcast(ue4Offset);
+			broadcast(glassOffset);
+
+			if (materialType == 0)
+				queue[ue4Offset + ue4Index].materialUE4 = index;
+			else if (materialType == 1)
+				queue[glassOffset + glassIndex].materialGlass = index;
+		
+			// update path only if it's alive
+			if (!pathEliminated)
+			{
+				// pick light and craete shadow ray
+				createShadowRay(index);
+
+				pathState[index].radiance = radiance;
+				pathState[index].throughtput = throughput;
+				pathState[index].pathLength++;
+				pathState[index].inShadow = true;
+			}
+		}
 	}
 
-	// reset extension and shadow ray queues
-	if (tid + gid.x == 0)
-		queueCounters.Store2(OFFSET_EXTRAY, uint2(0, 0));
+	//// reset extension and shadow ray queues
+	//if (tid + gid.x == 0)
+	//	queueCounters.Store4(OFFSET_EXTRAY, uint4(0, 0, 0, 0));
 }

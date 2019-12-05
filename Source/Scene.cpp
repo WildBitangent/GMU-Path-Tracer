@@ -11,6 +11,7 @@
 #include <thread>
 
 using namespace DirectX;
+static std::mutex mMutex; // TODO no need prob
 
 Scene::Scene(ID3D11Device* device, const std::string& path)
 	: mDevice(device)
@@ -98,6 +99,7 @@ void Scene::createBVH()
 	// build BVH
 	BVHWrapper bvh(mScene);
 
+	std::lock_guard<std::mutex> g(mMutex);
 	// create buffers and upload data
 	mBVHBuffer = createBuffer(mDevice, sizeof(BVHWrapper::BVHNode), bvh.mGPUTree);
 	mIndexBuffer = createBuffer(mDevice, sizeof(BVHWrapper::Triangle), bvh.mIndices);
@@ -115,7 +117,8 @@ void Scene::createSampler()
 	samplerDescriptor.ComparisonFunc = D3D11_COMPARISON_NEVER;
 	samplerDescriptor.MinLOD = 0;
 	samplerDescriptor.MaxLOD = D3D11_FLOAT32_MAX;
-
+	
+	std::lock_guard<std::mutex> g(mMutex);
 	mDevice->CreateSamplerState(&samplerDescriptor, &mSampler);
 }
 
@@ -130,7 +133,8 @@ void Scene::createPropertyBuffer(const std::vector<MaterialProperty>& data)
 	
 	D3D11_SUBRESOURCE_DATA bufferData = {};
 	bufferData.pSysMem = data.data();
-
+	
+	std::lock_guard<std::mutex> g(mMutex);
 	mDevice->CreateBuffer(&materialPropDescriptor, &bufferData, &mMaterialPropertyBuffer);
 }
 
@@ -220,6 +224,7 @@ void Scene::createTextures(LoadedTextures rawTextures, Texture& resource)
 	srvDescriptor.Texture2DArray.ArraySize = textures.size();
 	srvDescriptor.Texture2DArray.MipLevels = 1;
 	
+	std::lock_guard<std::mutex> g(mMutex);
 	mDevice->CreateTexture2D(&textureDescriptor, initData.data(), &resource.texture);
 	mDevice->CreateShaderResourceView(resource.texture, &srvDescriptor, &resource.srv);
 }

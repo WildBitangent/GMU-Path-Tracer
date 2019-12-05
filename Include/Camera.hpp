@@ -13,7 +13,7 @@ public:
 		DirectX::XMVECTOR horizontal;
 		DirectX::XMVECTOR vertical;
 		DirectX::XMFLOAT2 pixelSize;
-		uint32_t iterationCounter = 0;
+		int32_t iterationCounter = -1;
 		DirectX::XMFLOAT2 randomSeed;
 	};
 public:
@@ -35,6 +35,6 @@ private:
 	float mHalfHeight;
 
 	float mPitch = {}; // todo maybe use radians as base?
-	float mYaw = 270;
+	float mYaw = 290;
 	// float mYaw = 356;
 };

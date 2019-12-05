@@ -3,7 +3,8 @@
 #define FLT_MAX 3.402823466e+38
 #define EPSILON 1e-4
 #define STACKSIZE 16 // stack with depth of 16 is enough even for scene with 1.5M triangles TODO mb change in future / use of shared memory and subgroups
-#define PI 3.14159265359
+#define PI 3.1415926535897932384626433832795
+#define INVPI 0.31830988618379067153776752674503
 #define PATHCOUNT 2097152 // 2^21 2M paths TODO define at compilation time
 
 //#define LIGHT float3(4, 8, 8)
@@ -13,11 +14,15 @@
 #define EMISSION float3(40, 40, 0) * 20
 #define EMISSION2 float3(80, 80, 40)
 
+// queue counters
 #define OFFSET_NEWPATH 0
-#define OFFSET_MATUE4 4
-#define OFFSET_MATGLASS 8
-#define OFFSET_EXTRAY 12
-#define OFFSET_SHADOWRAY 16
+#define OFFSET_LASTPATHCNT 4
+#define OFFSET_MATUE4 8
+#define OFFSET_MATGLASS 12
+//#define OFFSET_EXTRAY 16
+#define OFFSET_EXTRAY_UE4_OFFSET 16
+#define OFFSET_EXTRAY_GLASS_OFFSET 20
+#define OFFSET_SHADOWRAY 24
 
 #define NV_SHADER_EXTN_SLOT u5
 
@@ -193,13 +198,14 @@ struct Queue
 	uint materialGlass;
 	uint extensionRay;
 	uint shadowRay;
-	
 	// uint queueCountNewPath; // at the end of struct
 	// uint queueCountUE4;
 	// uint queueCountGlass;
 	// uint queueCountExtensionRay;
 	// uint queueCountShadowRay;
 };
+
+groupshared uint temp[8];
 
 inline void broadcast(inout uint val)
 {

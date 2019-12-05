@@ -102,7 +102,7 @@ float rayBVHIntersection()
 
             if (node.isLeaf)
             {
-                for (uint i = node.leftIndex; i < node.rightIndex; i++)
+                for (int i = node.leftIndex; i < node.rightIndex; i++)
                 {
                     uint3 ii = indices[i].vtix;
                     float3 v0 = vertices[ii.x];
@@ -158,20 +158,21 @@ float rayBVHIntersection()
 }
 
 
-RWTexture2DArray<float4> output : register(u0);
 [numthreads(threadCountX, 1, 1)]
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex) // TODO does it need queue - isn't it just going through all the paths all the times
 {
     uint stride = threadCountX * numGroups;
-	uint queueElementCount = queueCounters.Load(OFFSET_EXTRAY);
+	//uint queueElementCount = queueCounters.Load(OFFSET_EXTRAY);
 
     for (int i = 0; i < 16; i++)
     {
+		// Always going through all paths
 		uint queueIndex = tid + 256 * gid.x + i * stride;
-        if (queueIndex >= queueElementCount)
-            break;
+        //if (queueIndex >= queueElementCount)
+        //    break;
 		
-		int index = queue[queueIndex].extensionRay;
+		uint index = queue[queueIndex].extensionRay;
+		//uint index = queueIndex;
 
 		state.ray = pathState[index].ray;
 

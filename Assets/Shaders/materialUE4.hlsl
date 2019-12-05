@@ -15,7 +15,7 @@ struct State
 
 RWStructuredBuffer<PathState> pathState : register(u1); 
 RWStructuredBuffer<Queue> queue : register(u2);
-globallycoherent RWByteAddressBuffer queueCounters : register(u3);
+RWByteAddressBuffer queueCounters : register(u3);
 StructuredBuffer<Light> lights : register(t3);
 
 ////////////////////////////////////////////
@@ -119,21 +119,22 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 {
     uint stride = threadCountX * numGroups;
 	uint queueElementCount = queueCounters.Load(OFFSET_MATUE4);
-	uint extQueueOffset = queueCounters.Load(OFFSET_EXTRAY);
+	uint extQueueOffset = queueCounters.Load(OFFSET_EXTRAY_UE4_OFFSET);
 	
-	seed = giseed.xy;
+	//seed = giseed.xy;
 
     for (int i = 0; i < 16; i++)
-    {
+	{
         uint queueIndex = tid + 256 * gid.x + i * stride;
         if (queueIndex >= queueElementCount)
             break;
 		
-        int index = queue[queueIndex].materialUE4;
+		seed = float2(frac(queueIndex * INVPI), frac(queueIndex * PI));
+        uint index = queue[queueIndex].materialUE4;
 
         State state;
         Sample sample;
-        float throughput = float3(0, 0, 0);
+        float3 throughput = float3(0, 0, 0);
 
 		// fill the state
         state.ray = pathState[index].ray;
@@ -146,41 +147,39 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
         if (sample.pdf > 0.0)
             throughput = ue4Evaluate(state, sample.bsdfDir) * abs(dot(state.normal, sample.bsdfDir)) / sample.pdf;
 		
-        pathState[index].lightThroughput = throughput;
-
+		pathState[index].lightThroughput = throughput;
+		//pathState[index].lightThroughput = float3(0.5, 0.5, 0.5);
+		
 		// create extended ray
-        float3 surfacePoint = pathState[index].surfacePoint;
-        state.ray = Ray::create(surfacePoint + sample.bsdfDir * EPSILON, sample.bsdfDir);
-
-        pathState[index].ray = state.ray; 
+		pathState[index].ray = Ray::create(pathState[index].surfacePoint + sample.bsdfDir * EPSILON, sample.bsdfDir);
 		queue[extQueueOffset + queueIndex].extensionRay = index;
 
 		// set directLight
-        float3 normal = pathState[index].normal;
-        int lightIndex = pathState[index].lightIndex;
         float3 lightDir = pathState[index].shadowRay.direction;
-        float distance = pathState[index].lightDistance;
-        Light light = lights[lightIndex];
 
-        bool legitLight = dot(lightDir, normal) > 0.0;
+        bool legitLight = dot(lightDir, state.normal) > 0.0;
 		uint shadowBallot = NvBallot(legitLight);
         uint shadowRayCount = countbits(shadowBallot);
         uint shadowRayOffset = 0;
 
         if (NvGetLaneId() == 0)
             queueCounters.InterlockedAdd(OFFSET_SHADOWRAY, shadowRayCount, shadowRayOffset);
-
+		
         broadcast(shadowRayOffset);
         uint shadowIndex = NvWaveMultiPrefixExclusiveAdd(1, shadowBallot);
 		
-        if (legitLight)
-            pathState[index].directLight = ue4Evaluate(state, lightDir) * light.emission * lightFalloff(distance, light.radius);
-
-		queue[shadowRayOffset + shadowIndex].shadowRay = index;
+		if (legitLight)
+		{
+			int lightIndex = pathState[index].lightIndex;
+			float distance = pathState[index].lightDistance;
+			Light light = lights[lightIndex];
+			
+			pathState[index].directLight = ue4Evaluate(state, lightDir) * light.emission * lightFalloff(distance, light.radius);
+			queue[shadowRayOffset + shadowIndex].shadowRay = index;
+		}
 	}
 	
-	
 	// update extension ray queue count
-	if (tid + gid.x == 0)
-		queueCounters.Store(OFFSET_EXTRAY, extQueueOffset + queueElementCount);
+	//if (tid + gid.x == 0)
+	//	queueCounters.Store(OFFSET_EXTRAY, extQueueOffset + queueElementCount);
 }
