@@ -145,36 +145,50 @@ void createShadowRay(in uint index)
 	_set_pstate_lightDistance(distance - EPSILON);
 }
 
+void clearTexture(in uint tid, in uint gid, in uint stride)
+{
+	for (uint i = 0; true; i++)
+	{
+		uint index = tid + threadCountX * gid + i * stride; // todo switch to dispatchID
+		
+		uint width = 1 / cam.pixelSize.x;
+		uint height = 1 / cam.pixelSize.y;
+		uint2 coord = uint2(index % width, index / width);
+			
+		if (index < width * height)
+		{
+			if (index == 0)
+				queueCounters.Store(OFFSET_QC_NEWPATH, PATHCOUNT); // TODO make getters too?
+				
+			float3 color = output[uint3(coord, 0)];
+			output[uint3(coord, 0)] = float4(color, asfloat(0));
+			output[uint3(coord, 1)] = float4(0, 0, 0, 0);
+		}
+		else if (index >= PATHCOUNT) // texture is cleared, terminate loop
+			break;
+			
+		if (index < PATHCOUNT)
+			_set_queue_newPath(index, index);
+	}
+}
+
 
 [numthreads(threadCountX, 1, 1)]
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_DispatchThreadID)
 {
     uint stride = threadCountX * numGroups;	
-
-    for (uint i = 0; i < 16; i++)
+	
+	// camera moved - resets accumulation buffer and generate new paths
+	if (cam.sampleCounter == 0)
 	{
-		uint index = tid + 256 * gid.x + i * stride; // todo switch to dispatchID
-		
-		// camera moved - resets accumulation buffer and generate new paths
-		if (cam.sampleCounter == 0)
+		clearTexture(tid, gid.x, stride);
+	}
+	else
+	{
+		for (uint i = 0; i < 16; i++)
 		{
-			uint width = 1280;
-			uint2 coord = uint2(index % width, index / width);
-			
-			if (index < 1280 * 720)
-			{
-				if (index == 0)
-					queueCounters.Store(OFFSET_QC_NEWPATH, PATHCOUNT);
-				
-				float3 color = output[uint3(coord, 0)];
-				output[uint3(coord, 0)] = float4(color, asfloat(0));
-				output[uint3(coord, 1)] = float4(0, 0, 0, 0);
-			}
-			
-			_set_queue_newPath(index, index);
-		}
-		else
-		{
+			uint index = tid + 256 * gid.x + i * stride;
+
 			seed = float2(frac(index * INVPI), frac(index * PI));
 			pathEliminated = false;
 
@@ -189,7 +203,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			throughput *= _pstate_lightThroughput;
 
 			// eliminate path with zero throughput
-			if (all(throughput <= 1e-8)) // TODO tweak const
+			if (all(throughput <= 0)) // TODO tweak const
 				pathEliminated = true;
 
 			// eliminate path out of scene
@@ -234,9 +248,9 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			broadcast(glassOffset);
 
 			if (materialType == 0)
-				_set_queue_matUE4(ue4Offset + ue4Index, index);
+			_set_queue_matUE4(ue4Offset + ue4Index, index);
 			else if (materialType == 1)
-				_set_queue_matGlass(glassOffset + glassIndex, index);
+			_set_queue_matGlass(glassOffset + glassIndex, index);
 		
 			// update path only if it's alive
 			if (!pathEliminated)

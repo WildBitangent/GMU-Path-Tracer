@@ -9,3 +9,6 @@ constexpr auto HEIGHTF = static_cast<float>(HEIGHT);
 constexpr auto FOV = 60.f;
 
 constexpr auto PATHCOUNT = 1 << 21; // 2M paths
+
+constexpr auto CAPTURE_DIR_NAME = R"(Captures)";
+constexpr auto CAPTURE_NAME = "potato";

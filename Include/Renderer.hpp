@@ -25,6 +25,7 @@ private:
 	void initScene();
 	void createBuffers();
 	void reloadComputeShaders(); // TODO rewrite
+	void captureScreen();
 
 	template<typename T>
 	T createShader(const std::wstring& path, const std::string& target);

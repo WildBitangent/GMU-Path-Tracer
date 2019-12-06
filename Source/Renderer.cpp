@@ -13,7 +13,10 @@
 #include <iostream>
 #include "nvapi/nvapi.h"
 #include <thread>
+#include "lodepng/lodepng.h"
+#include <filesystem>
 
+namespace fs = std::filesystem;
 using namespace DirectX;
 
 Renderer::Renderer(HWND hwnd, Resolution resolution)
@@ -38,7 +41,7 @@ Renderer::Renderer(HWND hwnd, Resolution resolution)
 	D3D11_SHADER_RESOURCE_VIEW_DESC renderTextureSRVDesc = {};
 	renderTextureSRVDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	renderTextureSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-	renderTextureSRVDesc.Texture2DArray.ArraySize = 2; // needing only first texture for rendering
+	renderTextureSRVDesc.Texture2DArray.ArraySize = 2; // only first texture needed for rendering
 	renderTextureSRVDesc.Texture2DArray.MipLevels = 1;
 
 	D3D11_UNORDERED_ACCESS_VIEW_DESC renderTextureUAVDesc = {};
@@ -49,7 +52,6 @@ Renderer::Renderer(HWND hwnd, Resolution resolution)
 	mDevice->CreateTexture2D(&renderTextureDescriptor, nullptr, &mRenderTexture);
 	mDevice->CreateShaderResourceView(mRenderTexture, &renderTextureSRVDesc, &mRenderTextureSRV);
 	mDevice->CreateUnorderedAccessView(mRenderTexture, &renderTextureUAVDesc, &mRenderTextureUAV);
-	// mDevice->CreateDepthStencilView(mDepthStencilBuffer, nullptr, &mDepthStencil);
 	
 	createBuffers();
 	initScene();
@@ -171,6 +173,9 @@ void Renderer::update(float dt)
 		reloadComputeShaders();
 		mScene.mCamera.getBuffer()->iterationCounter = -1; // will be updated in camera to the value 0
 	}
+
+	if (Input::getInstance().keyActive('C'))
+		captureScreen();
 	
 	mScene.update(dt);
 	
@@ -291,7 +296,7 @@ void Renderer::createDevice(HWND hwnd, Resolution resolution)
 		enumerateDevice(), 
 		D3D_DRIVER_TYPE_UNKNOWN, 
 		nullptr, 
-		{},  // TODO remove debug
+		D3D11_CREATE_DEVICE_DEBUG,  // TODO remove debug
 		nullptr, 0,
 		D3D11_SDK_VERSION, 
 		&swapChainDesc, &mSwapChain, 
@@ -367,6 +372,55 @@ void Renderer::reloadComputeShaders()
 	}
 
 	NvAPI_D3D11_SetNvShaderExtnSlot(mDevice, ~0u);
+}
+
+void Renderer::captureScreen()
+{
+    D3D11_TEXTURE2D_DESC desc = {};
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; // todo Alpha is used for counter
+    desc.Width = WIDTH;
+    desc.Height = HEIGHT;
+    desc.MipLevels = 1;
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.BindFlags = 0;
+    desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    desc.Usage = D3D11_USAGE_STAGING;
+
+     uni::Texure2D texture;
+     if (mDevice->CreateTexture2D(&desc, nullptr, &texture) != S_OK)
+		 return;
+
+	mContext->CopySubresourceRegion(texture, 0, 0, 0, 0, mRenderTexture, 0, nullptr);
+	
+	D3D11_MAPPED_SUBRESOURCE subresource;
+	mContext->Map(texture, 0, D3D11_MAP_READ, {}, &subresource);
+
+	std::vector<unsigned char> image(WIDTH * HEIGHT * 4);
+	for (size_t i = 0; i < WIDTH * HEIGHT * 4; i+= 4)
+	{
+		image[i] = reinterpret_cast<float*>(subresource.pData)[i] * 255;
+		image[i + 1] = reinterpret_cast<float*>(subresource.pData)[i + 1] * 255;
+		image[i + 2] = reinterpret_cast<float*>(subresource.pData)[i + 2] * 255;
+		image[i + 3] = 255;
+	}
+
+
+	auto counter = -1;
+	if (fs::exists(CAPTURE_DIR_NAME))
+	{
+	    for (const auto & entry : fs::directory_iterator(CAPTURE_DIR_NAME))
+	    {
+	    	auto numstr = entry.path().filename().string().substr(strlen(CAPTURE_NAME));
+	    	counter = std::max(counter, atoi(numstr.c_str()));
+	    }
+	}
+	else
+		CreateDirectory(CAPTURE_DIR_NAME, nullptr);
+
+	lodepng::encode(fmt::format(R"({}\{}{}.png)", CAPTURE_DIR_NAME, CAPTURE_NAME, counter + 1), image, WIDTH, HEIGHT);
+	mContext->Unmap(texture, 0);
 }
 
 template<typename T>

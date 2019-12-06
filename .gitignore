@@ -332,3 +332,6 @@ ASALocalRun/
 /lfs/objects
 /hooks
 /imgui.ini
+
+Captures/
+!Captures/.gitkeep

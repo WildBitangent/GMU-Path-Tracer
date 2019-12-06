@@ -163,11 +163,17 @@ Scene::LoadedTextures Scene::loadSpecificTexture(aiTextureType type, std::vector
 			assert(width == height);
 		}
 	}
-	
-	auto it = median.begin();
-	std::advance(it, median.size() / 2);
 
-	return std::make_pair(std::move(textures), static_cast<unsigned>(sqrt(*it / 4)));
+	unsigned medianVal = 0;
+
+	if (!median.empty())
+	{
+		auto it = median.begin();
+		std::advance(it, median.size() / 2);
+		medianVal = static_cast<unsigned>(sqrt(*it / 4)); // gets width as median
+	}
+
+	return std::make_pair(std::move(textures), medianVal);
 }
 
 void Scene::createTextures(LoadedTextures rawTextures, Texture& resource)
@@ -175,7 +181,7 @@ void Scene::createTextures(LoadedTextures rawTextures, Texture& resource)
 	auto& textures = rawTextures.first;
 	const auto dimension = rawTextures.second;
 
-	if (!textures.size())
+	if (textures.empty())
 		return;
 	
 	D3D11_TEXTURE2D_DESC textureDescriptor = {};
