@@ -20,53 +20,7 @@ Renderer::Renderer(HWND hwnd, Resolution resolution)
 	: mGUI(*this)
 {
 	NvAPI_Initialize();
-	
-	DXGI_MODE_DESC bufferDesc = {};
-	bufferDesc.Width = resolution.first;
-	bufferDesc.Height = resolution.second;
-	bufferDesc.RefreshRate.Numerator = 60;
-	bufferDesc.RefreshRate.Denominator = 1;
-	bufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	bufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-	bufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-
-	DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-	swapChainDesc.BufferDesc = bufferDesc;
-	swapChainDesc.SampleDesc.Count = 1;
-	swapChainDesc.SampleDesc.Quality = 0;
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.BufferCount = 1;
-	swapChainDesc.OutputWindow = hwnd;
-	swapChainDesc.Windowed = true;
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-
-	IDXGIFactory* pFactory;
-	CreateDXGIFactory(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&pFactory));
-
-	IDXGIAdapter* adapter;
-	std::vector <IDXGIAdapter*> adapters;
-	
-	for (size_t i = 0; pFactory->EnumAdapters(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i) 
-		adapters.emplace_back(adapter);
-
-	pFactory->Release();
-
-	
-	
-	// todo better adapter selection
-	if (const auto result = D3D11CreateDeviceAndSwapChain(adapters.at(adapters.size() - 2), D3D_DRIVER_TYPE_UNKNOWN, nullptr, D3D11_CREATE_DEVICE_DEBUG, nullptr, 0,
-		D3D11_SDK_VERSION, &swapChainDesc, &mSwapChain, &mDevice, nullptr, &mContext); result != S_OK)
-		throw std::runtime_error(fmt::format("Failed to create device with Swapchain. ERR: {}", result));
-
-	ID3D11Texture2D* backBuffer;
-	if (const auto result = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer)); result != S_OK)
-		throw std::runtime_error(fmt::format("Failed to create Back Buffer. ERR: {}", result));
-
-	if (const auto result = mDevice->CreateRenderTargetView(backBuffer, nullptr, &mRenderTarget); result != S_OK)
-		throw std::runtime_error(fmt::format("Failed to create Render Target View. ERR: {}", result));
-
-	mContext->OMSetRenderTargets(1, &mRenderTarget, nullptr);
-	backBuffer->Release();	
+	createDevice(hwnd, resolution);
 	
 	D3D11_TEXTURE2D_DESC renderTextureDescriptor = {};
 	renderTextureDescriptor.Width = WIDTH;
@@ -114,32 +68,7 @@ void Renderer::initScene() // TODO rewrite this to scene probably
 	mVertexShader = createShader<uni::VertexShader>(LR"(Assets\Shaders\Shader.vs.hlsl)", "vs_5_0");
 	mPixelShader = createShader<uni::PixelShader>(LR"(Assets\Shaders\Shader.ps.hlsl)", "ps_5_0");
 
-	if (NvAPI_D3D11_SetNvShaderExtnSlot(mDevice, 5) != NVAPI_OK)
-		throw std::runtime_error("Failed to add Nv Extension.");
-
-	auto work = [this](uni::ComputeShader& shader, const std::wstring& path)
-	{
-		shader = createShader<uni::ComputeShader>(path, "cs_5_0");
-	};
-	
-	std::vector<std::pair<uni::ComputeShader&, std::wstring>> shaders = {
-		{ mShaderLogic, LR"(Assets\Shaders\logic.hlsl)" }, // TODO yikes - too much registers, way too long compile time
-		{ mShaderNewPath, LR"(Assets\Shaders\newPath.hlsl)" },
-		{ mShaderMaterialUE4, LR"(Assets\Shaders\materialUE4.hlsl)" },
-		{ mShaderMaterialGlass, LR"(Assets\Shaders\materialGlass.hlsl)" },
-		{ mShaderExtensionRay, LR"(Assets\Shaders\extensionRayCast.hlsl)" },
-		{ mShaderShadowRay, LR"(Assets\Shaders\shadowRayCast.hlsl)" },
-	};
-	
-	std::vector<std::thread> workers;
-
-	for (auto& p : shaders)
-		workers.emplace_back(work, std::ref(p.first), std::ref(p.second));
-
-	for (auto& t : workers)
-		t.join();
-	
-	NvAPI_D3D11_SetNvShaderExtnSlot(mDevice, ~0u);
+	reloadComputeShaders();
 	
 	mContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
@@ -152,7 +81,10 @@ void Renderer::initScene() // TODO rewrite this to scene probably
 	viewport.MaxDepth = 1.0f;
 
 	mContext->RSSetViewports(1, &viewport);
+}
 
+void Renderer::createBuffers()
+{
 	D3D11_BUFFER_DESC cameraBufferDescriptor = {};
 	cameraBufferDescriptor.Usage = D3D11_USAGE_DEFAULT;
 	cameraBufferDescriptor.ByteWidth = sizeof(Camera::CameraBuffer);
@@ -161,10 +93,7 @@ void Renderer::initScene() // TODO rewrite this to scene probably
 	cameraBufferDescriptor.MiscFlags = 0;
 
 	mDevice->CreateBuffer(&cameraBufferDescriptor, nullptr, &mCameraBuffer);
-}
-
-void Renderer::createBuffers()
-{
+	
 	D3D11_BUFFER_DESC pathStateDescriptor = {};
 	pathStateDescriptor.Usage = D3D11_USAGE_DEFAULT;
 	pathStateDescriptor.ByteWidth = PATHCOUNT * 244;
@@ -239,7 +168,7 @@ void Renderer::update(float dt)
 {
 	if (Input::getInstance().keyActive('R'))
 	{
-		reloadShader();
+		reloadComputeShaders();
 		mScene.mCamera.getBuffer()->iterationCounter = -1; // will be updated in camera to the value 0
 	}
 	
@@ -316,19 +245,128 @@ void Renderer::draw()
 
 }
 
-void Renderer::reloadShader()
+IDXGIAdapter* Renderer::enumerateDevice()
 {
-	//uni::Blob err;
-	//uni::ComputeShader shader;
-	//
-	//if (const auto result = D3DCompileFromFile(L"Assets\\Shaders\\raytracer.hlsl", nullptr, nullptr, "main",
-	//	"cs_5_0", /*D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION*/{}, {}, &mBufferCS, &err); result != S_OK)
-	//	std::cerr << fmt::format("Failed to compile raytracer.hlsl. ERR: {}\n\n{}", result, reinterpret_cast<const char*>(err->GetBufferPointer())) << std::endl;
-	//else if (const auto result = mDevice->CreateComputeShader(mBufferCS->GetBufferPointer(),
-	//	mBufferCS->GetBufferSize(), nullptr, &shader); result != S_OK)
-	//	std::cerr << fmt::format("Failed to create compute shader object. ERR: {}", result) << std::endl;
-	//else 
-	//	mComputeShader = std::move(shader);
+	IDXGIFactory* pFactory;
+	CreateDXGIFactory(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&pFactory));
+
+	IDXGIAdapter* adapter;
+	DXGI_ADAPTER_DESC adapterDesc = {};
+	
+	for (size_t i = 0; pFactory->EnumAdapters(i, &adapter) != DXGI_ERROR_NOT_FOUND; ++i)
+	{
+		adapter->GetDesc(&adapterDesc);
+
+		if (adapterDesc.VendorId == 0x10DE) // Nvidia GPU
+			return adapter;
+	}
+
+	pFactory->Release();
+
+	return nullptr;
+}
+
+void Renderer::createDevice(HWND hwnd, Resolution resolution)
+{
+	DXGI_MODE_DESC bufferDesc = {};
+	bufferDesc.Width = resolution.first;
+	bufferDesc.Height = resolution.second;
+	bufferDesc.RefreshRate.Numerator = 60;
+	bufferDesc.RefreshRate.Denominator = 1;
+	bufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	bufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+	bufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+
+	DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+	swapChainDesc.BufferDesc = bufferDesc;
+	swapChainDesc.SampleDesc.Count = 1;
+	swapChainDesc.SampleDesc.Quality = 0;
+	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	swapChainDesc.BufferCount = 1;
+	swapChainDesc.OutputWindow = hwnd;
+	swapChainDesc.Windowed = true;
+	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+
+	auto result = D3D11CreateDeviceAndSwapChain(
+		enumerateDevice(), 
+		D3D_DRIVER_TYPE_UNKNOWN, 
+		nullptr, 
+		{},  // TODO remove debug
+		nullptr, 0,
+		D3D11_SDK_VERSION, 
+		&swapChainDesc, &mSwapChain, 
+		&mDevice, 
+		nullptr, 
+		&mContext
+	);
+	
+	if (result != S_OK)
+		throw std::runtime_error(fmt::format("Failed to create device with Swapchain. ERR: {}", result));
+
+	ID3D11Texture2D* backBuffer;
+	result = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer));
+
+	if (result != S_OK)
+		throw std::runtime_error(fmt::format("Failed to create Back Buffer. ERR: {}", result));
+
+	result =  mDevice->CreateRenderTargetView(backBuffer, nullptr, &mRenderTarget);
+	if (result != S_OK)
+		throw std::runtime_error(fmt::format("Failed to create Render Target View. ERR: {}", result));
+
+	mContext->OMSetRenderTargets(1, &mRenderTarget, nullptr);
+	backBuffer->Release();
+}
+
+void Renderer::reloadComputeShaders()
+{
+	if (NvAPI_D3D11_SetNvShaderExtnSlot(mDevice, 5) != NVAPI_OK)
+		throw std::runtime_error("Failed to add Nv Extension.");
+
+	std::exception_ptr deferredException;
+	auto work = [this, &deferredException](uni::ComputeShader& shader, const std::wstring& path)
+	{
+		try
+		{
+			shader = createShader<uni::ComputeShader>(path, "cs_5_0");
+		}
+		catch(...)
+		{
+			deferredException = std::current_exception();
+		}
+	};
+	
+	std::vector<std::pair<uni::ComputeShader&, std::wstring>> shaders = {
+		{ mShaderLogic, LR"(Assets\Shaders\logic.hlsl)" },
+		{ mShaderNewPath, LR"(Assets\Shaders\newPath.hlsl)" },
+		{ mShaderMaterialUE4, LR"(Assets\Shaders\materialUE4.hlsl)" },
+		{ mShaderMaterialGlass, LR"(Assets\Shaders\materialGlass.hlsl)" },
+		{ mShaderExtensionRay, LR"(Assets\Shaders\extensionRayCast.hlsl)" },
+		{ mShaderShadowRay, LR"(Assets\Shaders\shadowRayCast.hlsl)" },
+	};
+	
+	std::vector<std::thread> workers;
+
+	for (auto& p : shaders)
+		workers.emplace_back(work, std::ref(p.first), std::ref(p.second));
+
+	for (auto& t : workers)
+		t.join();
+
+	try
+	{
+		if (deferredException)
+			std::rethrow_exception(deferredException);
+	}
+	catch(std::runtime_error& e)
+	{
+		for (auto& s : shaders)
+			if (!s.first)
+				throw;
+		
+		OutputDebugString(fmt::format("Failed to compile shader. Continuing with last working version.\n {}", e.what()).c_str());
+	}
+
+	NvAPI_D3D11_SetNvShaderExtnSlot(mDevice, ~0u);
 }
 
 template<typename T>

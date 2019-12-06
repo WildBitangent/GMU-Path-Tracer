@@ -307,8 +307,6 @@ struct Queue
 	// uint queueCountShadowRay;
 };
 
-groupshared uint temp[8];
-
 inline void broadcast(inout uint val)
 {
     val |= NvShflXor(val, 16);

@@ -5,7 +5,7 @@
 
 cbuffer Material : register(b1)
 {
-    MaterialProperty materialProp[5]; // hopefully there won't be more than 128 materials (dx12 has unbound descriptors)
+    MaterialProperty materialProp[128]; // hopefully there won't be more than 128 materials (dx12 has unbound descriptors)
 };
 
 ////////////////////////////////////////////
@@ -63,7 +63,6 @@ void endPath(in float3 radiance, in uint index)
 		output[uint3(coord, 0)] = float4(t / sampleCount, asfloat(sampleCount)); // probably race condition, but nothing I can do with it atm
 		//output[uint3(coord, 0)] = float4(radiance, asfloat(sampleCount)); // probably race condition, but nothing I can do with it atm
 		output[uint3(coord, 1)] = float4((t - sum) - y, 0);
-		AllMemoryBarrier();
 		
 		_set_queue_newPath(offset + qindex, index);
 	}

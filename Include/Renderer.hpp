@@ -20,9 +20,11 @@ public:
 	void draw();
 
 private:
+	IDXGIAdapter* enumerateDevice();
+	void createDevice(HWND hwnd, Resolution resolution);
 	void initScene();
 	void createBuffers();
-	void reloadShader(); // TODO rewrite
+	void reloadComputeShaders(); // TODO rewrite
 
 	template<typename T>
 	T createShader(const std::wstring& path, const std::string& target);
