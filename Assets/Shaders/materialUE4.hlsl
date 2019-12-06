@@ -14,7 +14,7 @@ struct State
 ////////////////////////////////////////////
 
 RWByteAddressBuffer pathState : register(u1);
-RWStructuredBuffer<Queue> queue : register(u2);
+RWByteAddressBuffer queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
 StructuredBuffer<Light> lights : register(t3);
 
@@ -128,7 +128,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
             break;
 		
 		seed = float2(frac(queueIndex * INVPI), frac(queueIndex * PI));
-        uint index = queue[queueIndex].materialUE4;
+		uint index = _queue_matUE4;
 
         State state;
         Sample sample;
@@ -158,7 +158,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 		
 		_set_pstate_rayOrigin(extRay.origin);
 		_set_pstate_rayDirection(extRay.direction);
-		queue[extQueueOffset + queueIndex].extensionRay = index;
+		_set_queue_extRay(extQueueOffset + queueIndex, index);
 
 		// set directLight
 		float3 lightDir = _pstate_shadowrayDirection;
@@ -182,7 +182,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			
 			float3 directLight = ue4Evaluate(state, lightDir) * light.emission * lightFalloff(distance, light.radius);
 			_set_pstate_directlight(directLight);
-			queue[shadowRayOffset + shadowIndex].shadowRay = index;
+			_set_queue_shadowRay(shadowRayOffset + shadowIndex, index);
 		}
 	}
 }

@@ -5,7 +5,7 @@
 ////////////////////////////////////////////
 
 RWByteAddressBuffer pathState : register(u1);
-RWStructuredBuffer<Queue> queue : register(u2);
+RWByteAddressBuffer queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
 
 ////////////////////////////////////////////
@@ -27,7 +27,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 		
 		seed = float2(frac(queueIndex * INVPI), frac(queueIndex * PI));
 		
-		uint index = queue[queueIndex].newPath;
+		uint index = _queue_newPath;
         uint2 coord;
 		//uint width = (1.0 / cam.pixelSize.x);
 		//uint height = (1.0 / cam.pixelSize.y);
@@ -55,7 +55,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 		_set_pstate_inShadow(true);
 
 		// expecting that new path is running always as first
-		queue[queueIndex].extensionRay = index;
+		_set_queue_extRay(queueIndex, index);
 	}
 	
 	// update extension queue count, set offsets for UE4 and GLASS, and finally reset shadowCounts

@@ -11,7 +11,7 @@ cbuffer Material : register(b1)
 ////////////////////////////////////////////
 RWTexture2DArray<float4> output : register(u0); // TODO probably globally coherent
 RWByteAddressBuffer pathState : register(u1);
-RWStructuredBuffer<Queue> queue : register(u2);
+RWByteAddressBuffer queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
 
 StructuredBuffer<BVHNode> tree : register(t0);
@@ -64,7 +64,8 @@ void endPath(in float3 radiance, in uint index)
 		//output[uint3(coord, 0)] = float4(radiance, asfloat(sampleCount)); // probably race condition, but nothing I can do with it atm
 		output[uint3(coord, 1)] = float4((t - sum) - y, 0);
 		AllMemoryBarrier();
-		queue[offset + qindex].newPath = index;
+		
+		_set_queue_newPath(offset + qindex, index);
 	}
 }
 
@@ -171,7 +172,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 				output[uint3(coord, 1)] = float4(0, 0, 0, 0);
 			}
 			
-			queue[index].newPath = index;
+			_set_queue_newPath(index, index);
 		}
 		else
 		{
@@ -234,9 +235,9 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			broadcast(glassOffset);
 
 			if (materialType == 0)
-				queue[ue4Offset + ue4Index].materialUE4 = index;
+				_set_queue_matUE4(ue4Offset + ue4Index, index);
 			else if (materialType == 1)
-				queue[glassOffset + glassIndex].materialGlass = index;
+				_set_queue_matGlass(glassOffset + glassIndex, index);
 		
 			// update path only if it's alive
 			if (!pathEliminated)

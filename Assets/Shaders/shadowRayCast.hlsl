@@ -3,7 +3,7 @@
 ////////////////////////////////////////////
 
 RWByteAddressBuffer pathState : register(u1);
-RWStructuredBuffer<Queue> queue : register(u2);
+RWByteAddressBuffer queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
 
 StructuredBuffer<BVHNode> tree : register(t0);
@@ -156,7 +156,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex)
         if (queueIndex >= queueElementCount)
             break;
 		
-		uint index = queue[queueIndex].shadowRay;
+		uint index = _queue_shadowRay;
 		
 		Ray ray;
 		ray.origin = _pstate_shadowrayOrigin;

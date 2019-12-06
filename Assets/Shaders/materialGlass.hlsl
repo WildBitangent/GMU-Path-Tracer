@@ -14,7 +14,7 @@ struct State
 ////////////////////////////////////////////
 
 RWByteAddressBuffer pathState : register(u1);
-RWStructuredBuffer<Queue> queue : register(u2);
+RWByteAddressBuffer queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
 
 ////////////////////////////////////////////
@@ -59,7 +59,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
             break;
 		
 		seed = float2(frac(queueIndex * INVPI), frac(queueIndex * PI));
-		uint index = queue[queueIndex].materialGlass;
+		uint index = _queue_matGlass;
 
         State state;
         Sample sample;
@@ -80,6 +80,6 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 		
 		_set_pstate_rayOrigin(state.ray.origin);
 		_set_pstate_rayDirection(state.ray.direction);
-		queue[extQueueOffset + queueIndex].extensionRay = index;
+		_set_queue_extRay(extQueueOffset + queueIndex, index);
 	}
 }

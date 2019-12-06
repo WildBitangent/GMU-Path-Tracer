@@ -167,7 +167,7 @@ void Renderer::createBuffers()
 {
 	D3D11_BUFFER_DESC pathStateDescriptor = {};
 	pathStateDescriptor.Usage = D3D11_USAGE_DEFAULT;
-	pathStateDescriptor.ByteWidth = PATHCOUNT * 252;
+	pathStateDescriptor.ByteWidth = PATHCOUNT * 244;
 	pathStateDescriptor.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 	pathStateDescriptor.CPUAccessFlags = 0;
 	pathStateDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -177,8 +177,7 @@ void Renderer::createBuffers()
 	queueDescriptor.ByteWidth = PATHCOUNT * 20;
 	queueDescriptor.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 	queueDescriptor.CPUAccessFlags = 0;
-	queueDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	queueDescriptor.StructureByteStride = 20;
+	queueDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
 	D3D11_BUFFER_DESC queueCountersDescriptor = {};
 	queueCountersDescriptor.Usage = D3D11_USAGE_DEFAULT;
@@ -215,16 +214,15 @@ void Renderer::createBuffers()
 
 	// views
 	D3D11_UNORDERED_ACCESS_VIEW_DESC UAVDescriptor = {};
-	UAVDescriptor.Format = DXGI_FORMAT_UNKNOWN;
-	UAVDescriptor.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
-	UAVDescriptor.Buffer.FirstElement = 0;
-	UAVDescriptor.Buffer.NumElements = PATHCOUNT;
-	mDevice->CreateUnorderedAccessView(mQueueBuffer, &UAVDescriptor, &mQueueUAV);
-	
 	UAVDescriptor.Format = DXGI_FORMAT_R32_TYPELESS;
 	UAVDescriptor.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_RAW;
+	UAVDescriptor.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+	
 	UAVDescriptor.Buffer.NumElements = pathStateDescriptor.ByteWidth / 4;
 	mDevice->CreateUnorderedAccessView(mPathStateBuffer, &UAVDescriptor, &mPathStateUAV);
+
+	UAVDescriptor.Buffer.NumElements = queueDescriptor.ByteWidth / 4;
+	mDevice->CreateUnorderedAccessView(mQueueBuffer, &UAVDescriptor, &mQueueUAV);
 
 	UAVDescriptor.Buffer.NumElements = 8;
 	mDevice->CreateUnorderedAccessView(mQueueCountersBuffer, &UAVDescriptor, &mQueueCountersUAV);
@@ -232,7 +230,6 @@ void Renderer::createBuffers()
 	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDescriptor = {};
 	SRVDescriptor.Format = DXGI_FORMAT_UNKNOWN;
 	SRVDescriptor.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-	SRVDescriptor.Buffer.FirstElement = 0;
 	SRVDescriptor.Buffer.NumElements = 2;
 
 	mDevice->CreateShaderResourceView(mLightBuffer.buffer, &SRVDescriptor, &mLightBuffer.srv);

@@ -7,12 +7,16 @@
 #define INVPI 0.31830988618379067153776752674503
 #define PATHCOUNT 2097152 // 2^21 2M paths TODO define at compilation time
 
+///////////////////////////////////////////////////
 // define offsets for types
+///////////////////////////////////////////////////
 #define F4SO 16 * PATHCOUNT
 #define F2SO 8 * PATHCOUNT
 #define F1SO 4 * PATHCOUNT
 
+///////////////////////////////////////////////////
 // path state offsets
+///////////////////////////////////////////////////
 #define OFFSET_P_RAY_ORIGIN				0
 #define OFFSET_P_RAY_DIRECTION			OFFSET_P_RAY_ORIGIN + F4SO
 #define OFFSET_P_MAT_COLOR				OFFSET_P_RAY_DIRECTION + F4SO
@@ -36,14 +40,18 @@
 #define OFFSET_P_PATH_LENGTH			OFFSET_P_DIRECT_LIGHT + F4SO
 #define OFFSET_P_SCREEN_COORD			OFFSET_P_PATH_LENGTH + F1SO
 
+///////////////////////////////////////////////////
 // queue offsets
+///////////////////////////////////////////////////
 #define OFFSET_Q_NEWPATH				0
 #define OFFSET_Q_MAT_UE4				OFFSET_Q_NEWPATH + F1SO
 #define OFFSET_Q_MAT_GLASS				OFFSET_Q_MAT_UE4 + F1SO
 #define OFFSET_Q_EXT_RAY				OFFSET_Q_MAT_GLASS + F1SO
 #define OFFSET_Q_SHADOW_RAY				OFFSET_Q_EXT_RAY + F1SO
 
+///////////////////////////////////////////////////
 // queue counters offsets
+///////////////////////////////////////////////////
 #define OFFSET_QC_NEWPATH				0
 #define OFFSET_QC_LASTPATHCNT			4
 #define OFFSET_QC_MATUE4				8
@@ -52,8 +60,12 @@
 #define OFFSET_QC_EXTRAY_GLASS_OFFSET	20
 #define OFFSET_QC_SHADOWRAY				24
 
+///////////////////////////////////////////////////
 // define getters
-#define GET(what, index, bytes)			(OFFSET_##what + 4 * bytes * index)
+///////////////////////////////////////////////////
+#define GET(what, index, bytes)			(OFFSET_##what + 4 * bytes * (index))
+
+// LOADS ALWAYS LOAD FROM POSITION GIVEN BY "index" VARIABLE
 #define _pstate_rayOrigin				asfloat(pathState.Load3(GET(P_RAY_ORIGIN, index, 4)))
 #define _pstate_rayDirection			asfloat(pathState.Load3(GET(P_RAY_DIRECTION, index, 4)))
 #define _pstate_matColor				asfloat(pathState.Load3(GET(P_MAT_COLOR, index, 4)))
@@ -75,7 +87,17 @@
 #define _pstate_pathLength				pathState.Load(GET(P_PATH_LENGTH, index, 1))
 #define _pstate_screenCoord				pathState.Load2(GET(P_SCREEN_COORD, index, 2))
 
+// LOADS ALWAYS LOAD FROM POSITION GIVEN BY "queueIndex" VARIABLE
+#define _queue_newPath					queue.Load(GET(Q_NEWPATH, queueIndex, 1))
+#define _queue_matUE4					queue.Load(GET(Q_MAT_UE4, queueIndex, 1))
+#define _queue_matGlass					queue.Load(GET(Q_MAT_GLASS, queueIndex, 1))
+#define _queue_extRay					queue.Load(GET(Q_EXT_RAY, queueIndex, 1))
+#define _queue_shadowRay				queue.Load(GET(Q_SHADOW_RAY, queueIndex, 1))
+
+///////////////////////////////////////////////////
 // define setters
+///////////////////////////////////////////////////
+// STORES ALWAYS STORE TO LOCATION POINTED BY "index" VARIABLE
 #define _set_pstate_rayOrigin(val)				(pathState.Store3(GET(P_RAY_ORIGIN, index, 4), asuint(val)))
 #define _set_pstate_rayDirection(val)			(pathState.Store3(GET(P_RAY_DIRECTION, index, 4), asuint(val)))
 #define _set_pstate_matColor(val)				(pathState.Store3(GET(P_MAT_COLOR, index, 4), asuint(val)))
@@ -97,10 +119,17 @@
 #define _set_pstate_pathLength(val)				(pathState.Store(GET(P_PATH_LENGTH, index, 1), val))
 #define _set_pstate_screenCoord(val)			(pathState.Store2(GET(P_SCREEN_COORD, index, 2), val))
 
+#define _set_queue_newPath(index, val)			(queue.Store(GET(Q_NEWPATH, index, 1), val))
+#define _set_queue_matUE4(index, val)			(queue.Store(GET(Q_MAT_UE4, index, 1), val))
+#define _set_queue_matGlass(index, val)			(queue.Store(GET(Q_MAT_GLASS, index, 1), val))
+#define _set_queue_extRay(index, val)			(queue.Store(GET(Q_EXT_RAY, index, 1), val))
+#define _set_queue_shadowRay(index, val)		(queue.Store(GET(Q_SHADOW_RAY, index, 1), val))
+
 #define NV_SHADER_EXTN_SLOT u5
 
 #include "nvHLSLExtns.h"
 
+///////////////////////////////////////////////////
 
 struct Ray
 {
