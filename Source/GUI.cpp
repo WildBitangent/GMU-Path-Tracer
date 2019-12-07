@@ -10,8 +10,8 @@ GUI::GUI(Renderer& renderer)
 	IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-    // Setup Dear ImGui style
+	
+	// Setup Dear ImGui style
     ImGui::StyleColorsDark();
 }
 
@@ -35,9 +35,11 @@ void GUI::update()
     ImGui::NewFrame();
 
     {
-        ImGui::Begin("PGR Path Tracer");
+		ImGui::ShowDemoWindow();
+		ImGui::Begin("PGR Path Tracer");
+		
 
-        ImGui::Text("Average samples per pixel: %d", mRenderer.mScene.mCamera.getBuffer()->iterationCounter);
+        ImGui::Text("Iteration count: %d", mRenderer.mScene.mCamera.getBuffer()->iterationCounter);
 
 		
         //ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
@@ -51,7 +53,21 @@ void GUI::update()
         //ImGui::SameLine();
         //ImGui::Text("counter = %d", counter);
 
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::Text("Application average %.3f ms/iteration (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+		const char* items[] = { "HD 1280 x 720", "FHD 1920 x 1080", "QHD 2560 x 1440", "4K 3840 x 2160", "8K 7680 x 4320", "16K 15360 x 8640" };
+		Renderer::Resolution resolutions[] = {
+			{1280, 720},
+			{1920, 1080},
+			{2560, 1440},
+			{3840, 2160},
+			{7680, 4320},
+			{15360, 8640},
+		};
+
+		if (ImGui::Combo("Resolution", &mPickedResolution, items, IM_ARRAYSIZE(items)))
+			mRenderer.initResize(resolutions[mPickedResolution]);
+		
         ImGui::End();
     }
 
@@ -69,5 +85,6 @@ void GUI::update()
 void GUI::render() const
 {
     ImGui::Render();
+	
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }

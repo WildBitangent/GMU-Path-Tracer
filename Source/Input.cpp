@@ -15,7 +15,7 @@ bool Input::update(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	if (msg == WM_MOUSEMOVE && (GetKeyState(VK_RBUTTON) & 0x100) != 0)
 	{
 		const auto position = MAKEPOINTS(lParam);
-		POINT center = {WIDTH/2, HEIGHT/2};
+		POINT center = {mResolution.first / 2, mResolution.second / 2}; 
 
 		mMouseDelta = {
 			(position.x - center.x) * mSensitivity,
@@ -27,13 +27,21 @@ bool Input::update(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 	else if (msg == WM_RBUTTONDOWN)
 	{
-		POINT center = {WIDTH/2, HEIGHT/2};
+		POINT center = {mResolution.first / 2, mResolution.second / 2};
 		ClientToScreen(hwnd, &center);
 		SetCursorPos(center.x, center.y);
 		ShowCursor(false);
 	}
-	else if(msg == WM_RBUTTONUP)
+	else if (msg == WM_RBUTTONUP)
 		ShowCursor(true);
+	else if (msg == WM_SIZE)
+	{
+		RECT rect;
+		GetClientRect(hwnd, &rect);
+		
+		mResolution = { rect.right - rect.left,  rect.bottom - rect.top }; // todo I guess it will only return drawable area
+		mResized = true;
+	}
 	else
 		return false;
 
@@ -53,4 +61,20 @@ bool Input::keyActive(const int key) const
 bool Input::anyActive() const
 {
 	return mHasFocus ? GetAsyncKeyState('W') || GetAsyncKeyState('S') || GetAsyncKeyState('A') || GetAsyncKeyState('D') : false;
+}
+
+bool Input::hasResized()
+{
+	if (mResized)
+	{
+		mResized = false;
+		return true;
+	}
+
+	return false;
+}
+
+Input::Resolution Input::getResolution() const
+{
+	return mResolution;
 }

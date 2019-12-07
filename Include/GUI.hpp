@@ -16,4 +16,6 @@ public:
 
 private:
 	Renderer& mRenderer;
+	int mPickedResolution = 0;
+	
 };

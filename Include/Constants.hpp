@@ -1,6 +1,7 @@
 ﻿#pragma once
 
-constexpr auto WIDTH = 1280u;
+// This is just starting resolution, and it may change during execution
+constexpr auto WIDTH = 1280u; 
 constexpr auto HEIGHT = 720u;
 
 constexpr auto WIDTHF = static_cast<float>(WIDTH);

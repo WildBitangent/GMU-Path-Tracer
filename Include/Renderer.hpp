@@ -24,13 +24,18 @@ private:
 	void createDevice(HWND hwnd, Resolution resolution);
 	void initScene();
 	void createBuffers();
+	void createRenderTexture(Resolution res);
 	void reloadComputeShaders(); // TODO rewrite
 	void captureScreen();
+	void resize(const Resolution& resolution);
+	void resizeSwapchain(const Resolution& resolution);
+	void initResize(Resolution res);
 
 	template<typename T>
 	T createShader(const std::wstring& path, const std::string& target);
 
 private:
+	HWND mHwnd;
 	GUI mGUI;
 	Scene mScene;
 	// Camera mCamera;

@@ -13,6 +13,9 @@ extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam
 Window::Window(HINSTANCE hInstance, Resolution res, bool windowed, const std::string& name)
 {
 	const auto className = "PGR Projekt";
+
+	RECT rect = {0, 0, res.first, res.second };
+	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, false);
 	
 	WNDCLASSEX wc = {};
 	wc.cbSize = sizeof(WNDCLASSEX);
@@ -34,8 +37,8 @@ Window::Window(HINSTANCE hInstance, Resolution res, bool windowed, const std::st
 		name.c_str(),
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
-		res.first,
-		res.second,
+		rect.right - rect.left,
+		rect.bottom - rect.top,
 		nullptr,
 		nullptr,
 		hInstance,
@@ -103,6 +106,15 @@ LRESULT Window::wndCallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
+
+	case WM_GETMINMAXINFO:
+	{
+	    DefWindowProc(hwnd, msg, wParam, lParam);
+	    MINMAXINFO* pmmi = (MINMAXINFO*)lParam;
+	    pmmi->ptMaxTrackSize.x = 15360; // set to 16K
+	    pmmi->ptMaxTrackSize.y = 8640;
+	    return 0;
+	}
 	}
 
 	if (Input::getInstance().update(hwnd, msg, wParam, lParam))

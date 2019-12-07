@@ -19,6 +19,7 @@ void Camera::updateResolution(size_t width, size_t height)
     mHalfWidth = aspect * mHalfHeight;
 
 	mCBuffer.pixelSize = XMFLOAT2(1.f / width, 1.f / height);
+	mCBuffer.iterationCounter = -1;
 }
 
 void Camera::update(float dt)

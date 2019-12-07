@@ -21,37 +21,11 @@ using namespace DirectX;
 
 Renderer::Renderer(HWND hwnd, Resolution resolution)
 	: mGUI(*this)
+	, mHwnd(hwnd)
 {
 	NvAPI_Initialize();
 	createDevice(hwnd, resolution);
-	
-	D3D11_TEXTURE2D_DESC renderTextureDescriptor = {};
-	renderTextureDescriptor.Width = WIDTH;
-	renderTextureDescriptor.Height = HEIGHT;
-	renderTextureDescriptor.MipLevels = 1;
-	renderTextureDescriptor.ArraySize = 2;
-	renderTextureDescriptor.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	renderTextureDescriptor.SampleDesc.Count = 1;
-	renderTextureDescriptor.SampleDesc.Quality = 0;
-	renderTextureDescriptor.Usage = D3D11_USAGE_DEFAULT;
-	renderTextureDescriptor.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-	renderTextureDescriptor.CPUAccessFlags = 0;
-	renderTextureDescriptor.MiscFlags = 0;
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC renderTextureSRVDesc = {};
-	renderTextureSRVDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	renderTextureSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-	renderTextureSRVDesc.Texture2DArray.ArraySize = 2; // only first texture needed for rendering
-	renderTextureSRVDesc.Texture2DArray.MipLevels = 1;
-
-	D3D11_UNORDERED_ACCESS_VIEW_DESC renderTextureUAVDesc = {};
-	renderTextureUAVDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	renderTextureUAVDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
-	renderTextureUAVDesc.Texture2DArray.ArraySize = 2;
-
-	mDevice->CreateTexture2D(&renderTextureDescriptor, nullptr, &mRenderTexture);
-	mDevice->CreateShaderResourceView(mRenderTexture, &renderTextureSRVDesc, &mRenderTextureSRV);
-	mDevice->CreateUnorderedAccessView(mRenderTexture, &renderTextureUAVDesc, &mRenderTextureUAV);
+	createRenderTexture({ WIDTH, HEIGHT });
 	
 	createBuffers();
 	initScene();
@@ -166,8 +140,45 @@ void Renderer::createBuffers()
 	mDevice->CreateShaderResourceView(mLightBuffer.buffer, &SRVDescriptor, &mLightBuffer.srv);
 }
 
+void Renderer::createRenderTexture(Resolution res)
+{
+	D3D11_TEXTURE2D_DESC renderTextureDescriptor = {};
+	renderTextureDescriptor.Width = res.first;
+	renderTextureDescriptor.Height = res.second;
+	renderTextureDescriptor.MipLevels = 1;
+	renderTextureDescriptor.ArraySize = 2;
+	renderTextureDescriptor.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	renderTextureDescriptor.SampleDesc.Count = 1;
+	renderTextureDescriptor.SampleDesc.Quality = 0;
+	renderTextureDescriptor.Usage = D3D11_USAGE_DEFAULT;
+	renderTextureDescriptor.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+	renderTextureDescriptor.CPUAccessFlags = 0;
+	renderTextureDescriptor.MiscFlags = 0;
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC renderTextureSRVDesc = {};
+	renderTextureSRVDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	renderTextureSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+	renderTextureSRVDesc.Texture2DArray.ArraySize = 2; // only first texture needed for rendering
+	renderTextureSRVDesc.Texture2DArray.MipLevels = 1;
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC renderTextureUAVDesc = {};
+	renderTextureUAVDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	renderTextureUAVDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
+	renderTextureUAVDesc.Texture2DArray.ArraySize = 2;
+
+	mRenderTexture.reset();
+	mRenderTextureSRV.reset();
+	mRenderTextureUAV.reset();
+	mDevice->CreateTexture2D(&renderTextureDescriptor, nullptr, &mRenderTexture);
+	mDevice->CreateShaderResourceView(mRenderTexture, &renderTextureSRVDesc, &mRenderTextureSRV);
+	mDevice->CreateUnorderedAccessView(mRenderTexture, &renderTextureUAVDesc, &mRenderTextureUAV);
+}
+
 void Renderer::update(float dt)
 {
+	if (Input::getInstance().hasResized())
+		resize(Input::getInstance().getResolution());
+	
 	if (Input::getInstance().keyActive('R'))
 	{
 		reloadComputeShaders();
@@ -290,7 +301,7 @@ void Renderer::createDevice(HWND hwnd, Resolution resolution)
 	swapChainDesc.BufferCount = 1;
 	swapChainDesc.OutputWindow = hwnd;
 	swapChainDesc.Windowed = true;
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD; 
 
 	auto result = D3D11CreateDeviceAndSwapChain(
 		enumerateDevice(), 
@@ -376,11 +387,12 @@ void Renderer::reloadComputeShaders()
 
 void Renderer::captureScreen()
 {
+	auto resolution = Input::getInstance().getResolution();
     D3D11_TEXTURE2D_DESC desc = {};
     desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; // todo Alpha is used for counter
-    desc.Width = WIDTH;
-    desc.Height = HEIGHT;
+    desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    desc.Width = resolution.first;
+    desc.Height = resolution.second;
     desc.MipLevels = 1;
     desc.SampleDesc.Count = 1;
     desc.SampleDesc.Quality = 0;
@@ -397,8 +409,11 @@ void Renderer::captureScreen()
 	D3D11_MAPPED_SUBRESOURCE subresource;
 	mContext->Map(texture, 0, D3D11_MAP_READ, {}, &subresource);
 
-	std::vector<unsigned char> image(WIDTH * HEIGHT * 4);
-	for (size_t i = 0; i < WIDTH * HEIGHT * 4; i+= 4)
+	resolution.first = subresource.RowPitch / 16;
+	resolution.second = (subresource.DepthPitch / subresource.RowPitch);
+	
+	std::vector<unsigned char> image(resolution.first * resolution.second * 4);
+	for (size_t i = 0; i < resolution.first * resolution.second * 4; i+= 4)
 	{
 		image[i] = reinterpret_cast<float*>(subresource.pData)[i] * 255;
 		image[i + 1] = reinterpret_cast<float*>(subresource.pData)[i + 1] * 255;
@@ -419,8 +434,61 @@ void Renderer::captureScreen()
 	else
 		CreateDirectory(CAPTURE_DIR_NAME, nullptr);
 
-	lodepng::encode(fmt::format(R"({}\{}{}.png)", CAPTURE_DIR_NAME, CAPTURE_NAME, counter + 1), image, WIDTH, HEIGHT);
+	lodepng::encode(fmt::format(R"({}\{}{}.png)", CAPTURE_DIR_NAME, CAPTURE_NAME, counter + 1), image, resolution.first, resolution.second);
 	mContext->Unmap(texture, 0);
+}
+
+void Renderer::resize(const Resolution& resolution)
+{
+	mScene.mCamera.updateResolution(resolution.first, resolution.second);
+	resizeSwapchain(resolution);
+	createRenderTexture(resolution);
+}
+
+void Renderer::resizeSwapchain(const Resolution& resolution)
+{
+	mRenderTarget.reset();
+	mContext->OMSetRenderTargets(0, nullptr, nullptr);
+	mSwapChain->ResizeBuffers(1, resolution.first, resolution.second, DXGI_FORMAT_R8G8B8A8_UNORM, {});
+
+	ID3D11Texture2D* backBuffer;
+	auto result = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer));
+
+	if (result != S_OK)
+		throw std::runtime_error(fmt::format("Failed to create Back Buffer. ERR: {}", result));
+
+	result =  mDevice->CreateRenderTargetView(backBuffer, nullptr, &mRenderTarget);
+	if (result != S_OK)
+		throw std::runtime_error(fmt::format("Failed to create Render Target View. ERR: {}", result));
+
+	mContext->OMSetRenderTargets(1, &mRenderTarget, nullptr);
+	backBuffer->Release();
+
+	D3D11_VIEWPORT viewport;
+	viewport.TopLeftX = 0;
+	viewport.TopLeftY = 0;
+	viewport.Width = resolution.first;
+	viewport.Height = resolution.second;
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+
+	mContext->RSSetViewports(1, &viewport);
+}
+
+void Renderer::initResize(Resolution res)
+{
+	RECT currentWindowRect;
+	GetWindowRect(mHwnd, &currentWindowRect);
+
+	RECT currentClientSize = { 0, 0, res.first, res.second };
+	AdjustWindowRect(&currentClientSize, WS_OVERLAPPEDWINDOW, false);
+
+	MoveWindow(mHwnd, 
+		currentWindowRect.left, currentWindowRect.top, 
+		currentClientSize.right - currentClientSize.left, 
+		currentClientSize.bottom - currentClientSize.top, 
+		false
+	);
 }
 
 template<typename T>
