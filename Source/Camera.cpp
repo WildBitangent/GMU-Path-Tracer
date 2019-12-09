@@ -77,6 +77,12 @@ void Camera::update(float dt)
 	mCBuffer.randomSeed = { rrr(), rrr() };
 }
 
+void Camera::setRotation(float pitch, float yaw)
+{
+	mPitch = pitch;
+	mYaw = yaw;
+}
+
 Camera::CameraBuffer* Camera::getBuffer()
 {
 	return &mCBuffer;

@@ -22,7 +22,8 @@ public:
 	
 	void updateResolution(size_t width, size_t height);
 	void update(float dt);
-
+	void setRotation(float pitch, float yaw);
+	
 	CameraBuffer* getBuffer();
 
 private:

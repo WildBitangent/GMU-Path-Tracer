@@ -22,7 +22,7 @@ public:
 private:
 	IDXGIAdapter* enumerateDevice();
 	void createDevice(HWND hwnd, Resolution resolution);
-	void initScene();
+	void initScene(const std::string& name);
 	void createBuffers();
 	void createRenderTexture(Resolution res);
 	void reloadComputeShaders(); // TODO rewrite

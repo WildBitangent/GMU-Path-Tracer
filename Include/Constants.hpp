@@ -13,3 +13,5 @@ constexpr auto PATHCOUNT = 1 << 21; // 2M paths
 
 constexpr auto CAPTURE_DIR_NAME = R"(Captures)";
 constexpr auto CAPTURE_NAME = "potato";
+
+constexpr auto DEFAULT_SCENE = "bunny_glass\\scene.gltf";

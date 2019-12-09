@@ -35,51 +35,63 @@ void GUI::update()
     ImGui::NewFrame();
 
     {
-		ImGui::ShowDemoWindow();
 		ImGui::Begin("PGR Path Tracer");
 		
-
-        ImGui::Text("Iteration count: %d", mRenderer.mScene.mCamera.getBuffer()->iterationCounter);
-
 		
-        //ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-        //ImGui::Checkbox("Another Window", &show_another_window);
+        ImGui::Text("Current Paths %.3f GP", mRenderer.mScene.mCamera.getBuffer()->iterationCounter * 0.002);
+        ImGui::Text("Iteration count %d", mRenderer.mScene.mCamera.getBuffer()->iterationCounter);
+        ImGui::Text("Average %.3f ms/iteration (%.1f MP/s)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate * 2);
 
-        //ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-        // ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+		{
+			const char* items[] = { "HD 1280 x 720", "FHD 1920 x 1080", "QHD 2560 x 1440", "4K 3840 x 2160", "8K 7680 x 4320", "16K 15360 x 8640" };
+			Renderer::Resolution resolutions[] = {
+				{1280, 720},
+				{1920, 1080},
+				{2560, 1440},
+				{3840, 2160},
+				{7680, 4320},
+				{15360, 8640},
+			};
 
-        //if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-        //    counter++;
-        //ImGui::SameLine();
-        //ImGui::Text("counter = %d", counter);
+			if (ImGui::Combo("Resolution", &mPickedResolution, items, IM_ARRAYSIZE(items)))
+				mRenderer.initResize(resolutions[mPickedResolution]);
+		}
 
-        ImGui::Text("Application average %.3f ms/iteration (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		{
+			const char* scenes[] = { // todo automatic finding of models
+				"testScene\\scene.gltf",
+				"helmet\\scene.gltf",
+				"bunny_glass\\bunny_glass_closed.gltf",
+				"bunny_glass\\scene.gltf",
+				"box\\box.gltf",
+				"r3pu\\scene.gltf",
+			};
 
-		const char* items[] = { "HD 1280 x 720", "FHD 1920 x 1080", "QHD 2560 x 1440", "4K 3840 x 2160", "8K 7680 x 4320", "16K 15360 x 8640" };
-		Renderer::Resolution resolutions[] = {
-			{1280, 720},
-			{1920, 1080},
-			{2560, 1440},
-			{3840, 2160},
-			{7680, 4320},
-			{15360, 8640},
-		};
-
-		if (ImGui::Combo("Resolution", &mPickedResolution, items, IM_ARRAYSIZE(items)))
-			mRenderer.initResize(resolutions[mPickedResolution]);
+			struct
+			{
+				DirectX::XMVECTOR pos;
+				float pitch;
+				float yaw;
+			} const cameraParams[] = {
+				{ {-2.5, 2.2, 11.0}, -9, 312 },
+				{ {-2.6, 3.3, 1.3}, -23, 326 },
+				{ {-2.8, 5.4, 4.2}, -36, 302 },
+				{ {1.0, 3.0, 8.0}, 0, 270 },
+				{ {-9.2, 0.4, -6.3}, 2, 376 },
+				{ {8.6, -3.8, 17.8}, -2, 247 },
+			};
+			
+			if (ImGui::Combo("Scene", &mPickedScene, scenes, IM_ARRAYSIZE(scenes)))
+			{
+				const auto& params = cameraParams[mPickedScene];
+				mRenderer.initScene(scenes[mPickedScene]);
+				mRenderer.mScene.mCamera.getBuffer()->position = params.pos;
+				mRenderer.mScene.mCamera.setRotation(params.pitch, params.yaw);
+			}
+		}
 		
         ImGui::End();
     }
-
-    // 3. Show another simple window.
-    // if (show_another_window)
-    // {
-    //     ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-    //     ImGui::Text("Hello from another window!");
-    //     if (ImGui::Button("Close Me"))
-    //         show_another_window = false;
-    //     ImGui::End();
-    // }
 }
 
 void GUI::render() const

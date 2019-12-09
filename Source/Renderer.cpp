@@ -28,25 +28,12 @@ Renderer::Renderer(HWND hwnd, Resolution resolution)
 	createRenderTexture({ WIDTH, HEIGHT });
 	
 	createBuffers();
-	initScene();
-	mGUI.init(hwnd, mDevice, mContext);
-}
 
-void Renderer::initScene() // TODO rewrite this to scene probably
-{
-	// mScene = Scene(mDevice, R"(Assets\Models\r3pu\scene.gltf)");
-	// mScene = Scene(mDevice, R"(Assets\Models\bunny\scene.gltf)");
-	// mScene = Scene(mDevice, R"(Assets\Models\box\box.gltf)");
-	// mScene = Scene(mDevice, R"(Assets\Models\bunny_glass\scene.gltf)");
-	// mScene = Scene(mDevice, R"(Assets\Models\bunny_glass\bunny_glass_closed.gltf)");
-	// mScene = Scene(mDevice, R"(Assets\Models\helmet\scene.gltf)");
-	mScene = Scene(mDevice, R"(Assets\Models\testScene\scene.gltf)");
-	
 	mVertexShader = createShader<uni::VertexShader>(LR"(Assets\Shaders\Shader.vs.hlsl)", "vs_5_0");
 	mPixelShader = createShader<uni::PixelShader>(LR"(Assets\Shaders\Shader.ps.hlsl)", "ps_5_0");
 
 	reloadComputeShaders();
-	
+
 	mContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 	D3D11_VIEWPORT viewport;
@@ -58,6 +45,15 @@ void Renderer::initScene() // TODO rewrite this to scene probably
 	viewport.MaxDepth = 1.0f;
 
 	mContext->RSSetViewports(1, &viewport);
+	
+	initScene(DEFAULT_SCENE);
+	
+	mGUI.init(hwnd, mDevice, mContext);
+}
+
+void Renderer::initScene(const std::string& name)
+{
+	mScene = Scene(mDevice, std::string(R"(Assets\Models\)" + name));
 }
 
 void Renderer::createBuffers()

@@ -17,5 +17,5 @@ public:
 private:
 	Renderer& mRenderer;
 	int mPickedResolution = 0;
-	
+	int mPickedScene = 3;
 };
