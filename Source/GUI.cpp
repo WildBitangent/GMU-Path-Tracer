@@ -3,6 +3,7 @@
 #include "IMGUI/imgui_impl_dx11.h"
 #include "ImGUI/imgui_impl_win32.h"
 #include "Renderer.hpp"
+#include "spdlog/fmt/fmt.h"
 
 GUI::GUI(Renderer& renderer)
 	: mRenderer(renderer)
@@ -89,9 +90,143 @@ void GUI::update()
 				mRenderer.mScene.mCamera.setRotation(params.pitch, params.yaw);
 			}
 		}
+
+		ImGui::Checkbox("Show Light Editor", &mShowEditor);
 		
         ImGui::End();
     }
+
+	if (mShowEditor) // todo refactor
+	{
+		ImGui::SetNextWindowSizeConstraints(ImVec2(700, 0),  ImVec2(700, FLT_MAX));
+		ImGui::Begin("Light editor", &mShowEditor, ImGuiWindowFlags_NoCollapse);
+
+		if (ImGui::Button("Add Light"))
+		{
+			ImGui::OpenPopup("Light Edit");
+			mEditingLight = mRenderer.mScene.mCamera.getBuffer()->lightCount++;
+			const auto& light = mRenderer.mScene.mLights[mEditingLight];
+        	const auto power = std::max(light.emission.x, std::max(light.emission.y, light.emission.z));
+			const DirectX::XMFLOAT3A color = { light.emission.x / power, light.emission.y / power, light.emission.z / power }; 
+
+			// todo load light data
+			mLightPos = light.position;
+            mLightColor = color;
+            mLightPower = power;
+            mLightRadius = light.radius;
+
+			
+			mRenderer.mContext->UpdateSubresource(
+				mRenderer.mScene.mLightBuffer.buffer, 
+				0, nullptr, 
+				mRenderer.mScene.mLights.data(), 
+				0, 0
+			);
+			mRenderer.mScene.mCamera.getBuffer()->iterationCounter = -1;
+		}
+
+		ImGui::Columns(3, nullptr, false);
+        for (size_t i = 0; i < mRenderer.mScene.mCamera.getBuffer()->lightCount; i++)
+        {
+			const auto& light = mRenderer.mScene.mLights[i];
+        	const auto power = std::max(light.emission.x, std::max(light.emission.y, light.emission.z));
+			DirectX::XMFLOAT3A color = { light.emission.x / power, light.emission.y / power, light.emission.z / power }; 
+        	
+            if (ImGui::GetColumnIndex() == 0)
+                ImGui::Separator();
+        	
+            ImGui::Text("Light %d", i);
+        	// ImGui::Text("Light color");
+        	ImGui::SameLine();
+			ImGui::ColorButton("Light Color", *(ImVec4*)&color, 0, ImVec2(18,18));
+
+        	ImGui::Text("Position: %.2f  %.2f  %.2f", light.position.x, light.position.y, light.position.z);
+        	ImGui::Text("Emission: %.2f  %.2f  %.2f", light.emission.x, light.emission.y, light.emission.z);
+        	
+            if (ImGui::Button(fmt::format("Edit {}", i).c_str(), ImVec2(-FLT_MIN, 0.0f)))
+            {
+				ImGui::OpenPopup("Light Edit");
+	            mEditingLight = i;
+				
+				mLightPos = light.position;
+            	mLightColor = color;
+            	mLightPower = power;
+            	mLightRadius = light.radius;
+            }
+        	
+            ImGui::NextColumn();
+        }
+		
+		bool dummy = true;
+		ImGui::SetNextWindowSizeConstraints(ImVec2(320, -1),  ImVec2(320, -1));
+        if (ImGui::BeginPopupModal("Light Edit", &dummy))
+        {
+			ImGui::Checkbox("Live updating", &mUpdating);
+        	
+        	auto& light = mRenderer.mScene.mLights[mEditingLight];
+        	
+        	ImGui::ColorPicker3("Light Color", (float*)&mLightColor, 0);
+			
+            ImGui::Separator();
+        	ImGui::DragFloat3("Position", reinterpret_cast<float*>(&mLightPos), 0.1);
+        	ImGui::DragFloat("Power", &mLightPower, 0.1);
+        	ImGui::DragFloat("Radius", &mLightRadius, 0.1);
+
+        	if (mUpdating)
+        	{
+				light.emission = { mLightColor.x * mLightPower, mLightColor.y * mLightPower, mLightColor.z * mLightPower };
+        		light.position = mLightPos;
+        		light.radius = mLightRadius;
+
+        		mRenderer.mContext->UpdateSubresource(
+					mRenderer.mScene.mLightBuffer.buffer, 
+					0, nullptr, 
+					mRenderer.mScene.mLights.data(), 
+					0, 0
+				);
+        	}
+        	
+            ImGui::Separator();
+            if (ImGui::Button("Update"))
+            {
+            	light.emission = { mLightColor.x * mLightPower, mLightColor.y * mLightPower, mLightColor.z * mLightPower };
+        		light.position = mLightPos;
+        		light.radius = mLightRadius;
+
+            	mRenderer.mContext->UpdateSubresource(
+					mRenderer.mScene.mLightBuffer.buffer, 
+					0, nullptr, 
+					mRenderer.mScene.mLights.data(), 
+					0, 0
+				);
+				mRenderer.mScene.mCamera.getBuffer()->iterationCounter = -1;
+            	
+                ImGui::CloseCurrentPopup();
+            }
+        	ImGui::SameLine();
+        	if (ImGui::Button("Delete"))
+        	{
+        		for (size_t i = mEditingLight; i < mRenderer.mScene.mCamera.getBuffer()->lightCount; i++)
+					mRenderer.mScene.mLights[i] = mRenderer.mScene.mLights[i + 1];
+
+        		mRenderer.mScene.mCamera.getBuffer()->lightCount--;
+        		
+				mRenderer.mContext->UpdateSubresource(
+					mRenderer.mScene.mLightBuffer.buffer, 
+					0, nullptr, 
+					mRenderer.mScene.mLights.data(), 
+					0, 0
+				);
+				mRenderer.mScene.mCamera.getBuffer()->iterationCounter = -1;
+
+        		ImGui::CloseCurrentPopup();
+        	}
+
+            ImGui::EndPopup();
+        }
+        
+		ImGui::End();
+	}
 }
 
 void GUI::render() const

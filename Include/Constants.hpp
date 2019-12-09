@@ -15,3 +15,5 @@ constexpr auto CAPTURE_DIR_NAME = R"(Captures)";
 constexpr auto CAPTURE_NAME = "potato";
 
 constexpr auto DEFAULT_SCENE = "bunny_glass\\scene.gltf";
+
+constexpr auto MAX_LIGHTS = 128u;

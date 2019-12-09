@@ -7,7 +7,15 @@
 #include "Util.hpp"
 #include <assimp/material.h>
 #include <mutex>
+#include "Constants.hpp"
+#include <array>
 
+struct Light
+{
+	DirectX::XMFLOAT3 position;
+	DirectX::XMFLOAT3 emission;
+	float radius;
+};
 
 struct alignas(16) MaterialProperty // TODO CBUFFER
 {
@@ -62,10 +70,9 @@ private:
 
 	LoadedTextures loadSpecificTexture(aiTextureType type, std::vector<MaterialProperty>& properties, MaterialProperty::Indices index) const;
 	void createTextures(LoadedTextures rawTextures, Texture& resource);
+	void createLights();
 	
-private:
-	// BVHWrapper mBVH;
-	
+private:	
 	ID3D11Device* mDevice;
 	Camera mCamera;
 	aiScene* mScene;
@@ -75,14 +82,15 @@ private:
 	Buffer mIndexBuffer;
 	Buffer mVertexBuffer;
 	Buffer mTriangleProperties;
+	Buffer mLightBuffer;
 
 	uni::SamplerState mSampler;
 	uni::Buffer mMaterialPropertyBuffer;	
 	Texture mDiffuse;
 	Texture mMetallicRoughness;
 	Texture mNormal;
-
-	// std::vector<MaterialProperty> mMaterialProperties;
+	
+	std::array<Light, MAX_LIGHTS> mLights;
 
 	friend class Renderer; // TODO change the laziness
 	friend class GUI;

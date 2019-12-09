@@ -154,12 +154,17 @@ struct Light
 struct Camera
 {
     float3 pos;
+	float pad0;
 	float3 ulc;
+	float pad1;
     float3 horizontal;
+	float pad2;
 	float3 vertical;
+	float pad3;
 	float2 pixelSize;
-    uint sampleCounter;
     float2 randomSeed;
+    uint sampleCounter;
+	uint lightCount;
 };
 
 struct BVHNode

@@ -13,8 +13,10 @@ public:
 		DirectX::XMVECTOR horizontal;
 		DirectX::XMVECTOR vertical;
 		DirectX::XMFLOAT2 pixelSize;
-		int32_t iterationCounter = -1;
+		
 		DirectX::XMFLOAT2 randomSeed;
+		int32_t iterationCounter = -1;	// TODO these shouldn't be in camera buffer
+		uint32_t lightCount = 2;
 	};
 public:
 
@@ -35,7 +37,6 @@ private:
 	float mHalfWidth;
 	float mHalfHeight;
 
-	float mPitch = {}; // todo maybe use radians as base?
+	float mPitch = {};
 	float mYaw = 270;
-	// float mYaw = 356;
 };

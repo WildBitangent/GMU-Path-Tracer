@@ -1,12 +1,8 @@
 ﻿#pragma once
 #include <d3d11.h>
-#include <DirectXMath.h>
 #include <utility>
 
 #include "UniqueDX11.hpp"
-#include "assimp/Importer.hpp"
-#include "Model.hpp"
-#include "Camera.hpp"
 #include "Scene.hpp"
 #include "GUI.hpp"
 
@@ -37,19 +33,13 @@ private:
 private:
 	HWND mHwnd;
 	GUI mGUI;
-	Scene mScene;
-	// Camera mCamera;
-	// ModelManager mModel;
-	// uint32_t mNumIndices;
-	
+	Scene mScene;	
 
 	uni::Swapchain mSwapChain;
 	uni::Device mDevice;
 	uni::DeviceContext mContext;
 	uni::RenderTargetView mRenderTarget;
 	
-	// uni::Buffer mVertexBuffer;
-	// uni::Buffer mIndexBuffer;
 	uni::VertexShader mVertexShader;
 	uni::PixelShader mPixelShader;
 	uni::ComputeShader mShaderLogic;
@@ -61,12 +51,9 @@ private:
 	
 	uni::InputLayout mVertexLayout;
 
-	// uni::DepthStencilView mDepthStencil;
 	uni::Texure2D mRenderTexture;
 	uni::ShaderResourceView mRenderTextureSRV;
 	uni::UnorderedAccessView mRenderTextureUAV;
-	
-	Buffer mLightBuffer;
 	
 	uni::Buffer mCameraBuffer;
 	uni::Buffer mPathStateBuffer;
@@ -77,8 +64,5 @@ private:
 	uni::UnorderedAccessView mQueueUAV;
 	uni::UnorderedAccessView mQueueCountersUAV;
 
-	// uni::SamplerState mSampler;
-	// uni::ShaderResourceView mTexture;
-	//
 	friend class GUI;
 };

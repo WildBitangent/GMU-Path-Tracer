@@ -10,7 +10,6 @@
 #include <vector>
 #include <array>
 #include "Input.hpp"
-#include <iostream>
 #include "nvapi/nvapi.h"
 #include <thread>
 #include "lodepng/lodepng.h"
@@ -87,32 +86,10 @@ void Renderer::createBuffers()
 	queueCountersDescriptor.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 	queueCountersDescriptor.CPUAccessFlags = 0;
 	queueCountersDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-
-	D3D11_BUFFER_DESC lightDescriptor = {};
-	lightDescriptor.Usage = D3D11_USAGE_DEFAULT;
-	lightDescriptor.ByteWidth = 56;
-	lightDescriptor.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	lightDescriptor.CPUAccessFlags = 0;
-	lightDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-	lightDescriptor.StructureByteStride = 28;
-
-	float data[] = {
-		13.f, 4.5, 4.5f, // pos
-		80.f, 80.f, 40.f, // emission
-		100.f, // radius
-		
-		0.f, 4.5f, 2.f, // pos
-		80.f, 80.f, 40.f, // emission
-		100.f, // radius
-	};
-
-	D3D11_SUBRESOURCE_DATA dataInit = {};
-	dataInit.pSysMem = data;
 	
 	mDevice->CreateBuffer(&pathStateDescriptor, nullptr, &mPathStateBuffer);
 	mDevice->CreateBuffer(&queueDescriptor, nullptr, &mQueueBuffer);
 	mDevice->CreateBuffer(&queueCountersDescriptor, nullptr, &mQueueCountersBuffer);
-	mDevice->CreateBuffer(&lightDescriptor, &dataInit, &mLightBuffer.buffer); // todo change
 
 	// views
 	D3D11_UNORDERED_ACCESS_VIEW_DESC UAVDescriptor = {};
@@ -128,13 +105,6 @@ void Renderer::createBuffers()
 
 	UAVDescriptor.Buffer.NumElements = 8;
 	mDevice->CreateUnorderedAccessView(mQueueCountersBuffer, &UAVDescriptor, &mQueueCountersUAV);
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDescriptor = {};
-	SRVDescriptor.Format = DXGI_FORMAT_UNKNOWN;
-	SRVDescriptor.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-	SRVDescriptor.Buffer.NumElements = 2;
-
-	mDevice->CreateShaderResourceView(mLightBuffer.buffer, &SRVDescriptor, &mLightBuffer.srv);
 }
 
 void Renderer::createRenderTexture(Resolution res)
@@ -198,7 +168,7 @@ void Renderer::draw()
 		mScene.mBVHBuffer.srv,
 		mScene.mIndexBuffer.srv,
 		mScene.mVertexBuffer.srv,
-		mLightBuffer.srv,
+		mScene.mLightBuffer.srv,
 		mScene.mTriangleProperties.srv,
 		mScene.mDiffuse.srv,
 		mScene.mMetallicRoughness.srv,

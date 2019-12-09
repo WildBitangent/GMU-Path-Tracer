@@ -7,7 +7,6 @@ struct aiMesh;
 struct aiScene;
 
 
-
 class BVHWrapper
 {
 public:
@@ -37,10 +36,6 @@ public:
 public:
 	BVHWrapper() = default;
 	BVHWrapper(const aiScene* scene);
-
-	
-	
-
 
 private:
 	void buildSBVH();

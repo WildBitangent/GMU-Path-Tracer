@@ -9,9 +9,9 @@
 #include "avir/avir.h"
 #include "avir/avir_float8_avx.h"
 #include <thread>
+#include "Constants.hpp"
 
 using namespace DirectX;
-static std::mutex mMutex; // TODO no need prob
 
 Scene::Scene(ID3D11Device* device, const std::string& path)
 	: mDevice(device)
@@ -24,6 +24,7 @@ Scene::Scene(ID3D11Device* device, const std::string& path)
 	// createBVH();
 	loadTextures();
 	createSampler();
+	createLights();
 
 	worker.join();
 
@@ -99,7 +100,6 @@ void Scene::createBVH()
 	// build BVH
 	BVHWrapper bvh(mScene);
 
-	std::lock_guard<std::mutex> g(mMutex);
 	// create buffers and upload data
 	mBVHBuffer = createBuffer(mDevice, sizeof(BVHWrapper::BVHNode), bvh.mGPUTree);
 	mIndexBuffer = createBuffer(mDevice, sizeof(BVHWrapper::Triangle), bvh.mIndices);
@@ -118,7 +118,6 @@ void Scene::createSampler()
 	samplerDescriptor.MinLOD = 0;
 	samplerDescriptor.MaxLOD = D3D11_FLOAT32_MAX;
 	
-	std::lock_guard<std::mutex> g(mMutex);
 	mDevice->CreateSamplerState(&samplerDescriptor, &mSampler);
 }
 
@@ -134,7 +133,6 @@ void Scene::createPropertyBuffer(const std::vector<MaterialProperty>& data)
 	D3D11_SUBRESOURCE_DATA bufferData = {};
 	bufferData.pSysMem = data.data();
 	
-	std::lock_guard<std::mutex> g(mMutex);
 	mDevice->CreateBuffer(&materialPropDescriptor, &bufferData, &mMaterialPropertyBuffer);
 }
 
@@ -230,7 +228,31 @@ void Scene::createTextures(LoadedTextures rawTextures, Texture& resource)
 	srvDescriptor.Texture2DArray.ArraySize = textures.size();
 	srvDescriptor.Texture2DArray.MipLevels = 1;
 	
-	std::lock_guard<std::mutex> g(mMutex);
 	mDevice->CreateTexture2D(&textureDescriptor, initData.data(), &resource.texture);
 	mDevice->CreateShaderResourceView(resource.texture, &srvDescriptor, &resource.srv);
+}
+
+void Scene::createLights()
+{
+	D3D11_BUFFER_DESC lightDescriptor = {};
+	lightDescriptor.Usage = D3D11_USAGE_DEFAULT;
+	lightDescriptor.ByteWidth = MAX_LIGHTS * sizeof(Light);
+	lightDescriptor.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	lightDescriptor.CPUAccessFlags = 0;
+	lightDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	lightDescriptor.StructureByteStride = sizeof(Light);
+
+	mLights[0] = { {13.0, 4.5, 4.5}, {80.0, 80.0, 40.0}, 100.0 }; // todo load some default lights?
+	mLights[1] = { {0.0, 4.5, 2.0}, {80.0, 80.0, 40.0}, 100.0 };
+
+	D3D11_SUBRESOURCE_DATA dataInit = {};
+	dataInit.pSysMem = mLights.data();
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDescriptor = {};
+	SRVDescriptor.Format = DXGI_FORMAT_UNKNOWN;
+	SRVDescriptor.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	SRVDescriptor.Buffer.NumElements = MAX_LIGHTS;
+
+	mDevice->CreateBuffer(&lightDescriptor, &dataInit, &mLightBuffer.buffer);
+	mDevice->CreateShaderResourceView(mLightBuffer.buffer, &SRVDescriptor, &mLightBuffer.srv);
 }

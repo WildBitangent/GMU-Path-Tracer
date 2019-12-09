@@ -64,8 +64,7 @@ void endPath(in float3 radiance, in uint index)
 		float3 t = sum + y;
 	
 		// write out
-		output[uint3(coord, 0)] = float4(t / sampleCount, asfloat(sampleCount)); // probably race condition, but nothing I can do with it atm
-		//output[uint3(coord, 0)] = float4(radiance, asfloat(sampleCount)); // probably race condition, but nothing I can do with it atm
+		output[uint3(coord, 0)] = float4(t / sampleCount, asfloat(sampleCount)); // probably race condition
 		output[uint3(coord, 1)] = float4((t - sum) - y, 0);
 		
 		_set_queue_newPath(offset + qindex, index);
@@ -130,7 +129,7 @@ uint setMaterialHitProperties(in uint index)
 
 void createShadowRay(in uint index)
 {
-	uint lightIndex = uint(rand() * 2); // TODO change: 2 = num of lights
+	uint lightIndex = uint(rand() * cam.lightCount);
 	
 	// set shadow ray
 	float3 normal = _pstate_normal;
