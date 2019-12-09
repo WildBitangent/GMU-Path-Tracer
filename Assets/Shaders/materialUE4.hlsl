@@ -154,7 +154,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 		
 		// create extended ray
 		float3 surfacePoint = _pstate_surfacePoint;
-		Ray extRay = Ray::create(surfacePoint + sample.bsdfDir * EPSILON, sample.bsdfDir);
+		Ray extRay = Ray::create(surfacePoint + sample.bsdfDir * EPSILON_OFFSET, sample.bsdfDir);
 		
 		_set_pstate_rayOrigin(extRay.origin);
 		_set_pstate_rayDirection(extRay.direction);

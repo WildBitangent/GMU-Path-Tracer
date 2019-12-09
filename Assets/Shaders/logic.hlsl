@@ -46,6 +46,10 @@ void endPath(in float3 radiance, in uint index)
 	if (pathEliminated)
 	{
 		radiance = saturate(radiance);
+		
+		// gamma correction
+		radiance /= radiance + float3(1, 1, 1);
+		radiance = pow(radiance, float3(1, 1, 1) / 2.2);
 
 		uint2 coord = _pstate_screenCoord;
 
@@ -130,7 +134,7 @@ void createShadowRay(in uint index)
 	
 	// set shadow ray
 	float3 normal = _pstate_normal;
-	float3 surfacePos = _pstate_surfacePoint + normal * EPSILON;
+	float3 surfacePos = _pstate_surfacePoint + normal * EPSILON_OFFSET;
     float3 lightDir = lights[lightIndex].position - surfacePos;
     float distance = length(lightDir);
 
@@ -142,7 +146,7 @@ void createShadowRay(in uint index)
 	_set_pstate_lightIndex(lightIndex);
 	_set_pstate_shadowrayOrigin(shadowRay.origin);
 	_set_pstate_shadowrayDirection(shadowRay.direction);
-	_set_pstate_lightDistance(distance - EPSILON);
+	_set_pstate_lightDistance(distance - EPSILON_OFFSET);
 }
 
 void clearTexture(in uint tid, in uint gid, in uint stride)

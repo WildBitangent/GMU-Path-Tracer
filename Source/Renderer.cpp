@@ -37,9 +37,10 @@ void Renderer::initScene() // TODO rewrite this to scene probably
 	// mScene = Scene(mDevice, R"(Assets\Models\r3pu\scene.gltf)");
 	// mScene = Scene(mDevice, R"(Assets\Models\bunny\scene.gltf)");
 	// mScene = Scene(mDevice, R"(Assets\Models\box\box.gltf)");
-	mScene = Scene(mDevice, R"(Assets\Models\bunny_glass\scene.gltf)");
+	// mScene = Scene(mDevice, R"(Assets\Models\bunny_glass\scene.gltf)");
 	// mScene = Scene(mDevice, R"(Assets\Models\bunny_glass\bunny_glass_closed.gltf)");
 	// mScene = Scene(mDevice, R"(Assets\Models\helmet\scene.gltf)");
+	mScene = Scene(mDevice, R"(Assets\Models\testScene\scene.gltf)");
 	
 	mVertexShader = createShader<uni::VertexShader>(LR"(Assets\Shaders\Shader.vs.hlsl)", "vs_5_0");
 	mPixelShader = createShader<uni::PixelShader>(LR"(Assets\Shaders\Shader.ps.hlsl)", "ps_5_0");
@@ -100,8 +101,8 @@ void Renderer::createBuffers()
 	lightDescriptor.StructureByteStride = 28;
 
 	float data[] = {
-		2.f, 23.5f, 0.f, // pos
-		800.f, 800.f, 0.f, // emission
+		13.f, 4.5, 4.5f, // pos
+		80.f, 80.f, 40.f, // emission
 		100.f, // radius
 		
 		0.f, 4.5f, 2.f, // pos

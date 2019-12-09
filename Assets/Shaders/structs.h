@@ -1,7 +1,8 @@
 #define threadCountX 256
 #define numGroups 512 // TODO is there better way?
 #define FLT_MAX 3.402823466e+38
-#define EPSILON 1e-4
+#define EPSILON 1e-8
+#define EPSILON_OFFSET 1e-3
 #define STACKSIZE 16 // stack with depth of 16 is enough even for scene with 1.5M triangles TODO mb change in future / use of shared memory and subgroups
 #define PI 3.1415926535897932384626433832795
 #define INVPI 0.31830988618379067153776752674503
