@@ -5,6 +5,7 @@
 #include "Renderer.hpp"
 #include "spdlog/fmt/fmt.h"
 
+
 GUI::GUI(Renderer& renderer)
 	: mRenderer(renderer)
 {
@@ -14,6 +15,8 @@ GUI::GUI(Renderer& renderer)
 	
 	// Setup Dear ImGui style
     ImGui::StyleColorsDark();
+
+	findScenes();
 }
 
 GUI::~GUI()
@@ -59,14 +62,14 @@ void GUI::update()
 		}
 
 		{
-			const char* scenes[] = { // todo automatic finding of models
-				"testScene\\scene.gltf",
-				"helmet\\scene.gltf",
-				"bunny_glass\\bunny_glass_closed.gltf",
-				"bunny_glass\\scene.gltf",
-				"box\\box.gltf",
-				"r3pu\\scene.gltf",
-			};
+			// const char* scenes[] = { // todo automatic finding of models
+			// 	"testScene\\scene.gltf",
+			// 	"helmet\\scene.gltf",
+			// 	"bunny_glass\\bunny_glass_closed.gltf",
+			// 	"bunny_glass\\scene.gltf",
+			// 	"box\\box.gltf",
+			// 	"r3pu\\scene.gltf",
+			// };
 
 			struct
 			{
@@ -82,10 +85,10 @@ void GUI::update()
 				{ {8.6, -3.8, 17.8}, -2, 247 },
 			};
 			
-			if (ImGui::Combo("Scene", &mPickedScene, scenes, IM_ARRAYSIZE(scenes)))
+			if (ImGui::Combo("Scene", &mPickedScene, mScenePathsReferences.data(), mScenePathsReferences.size()))
 			{
 				const auto& params = cameraParams[mPickedScene];
-				mRenderer.initScene(scenes[mPickedScene]);
+				mRenderer.initScene(mScenePathNames[mPickedScene]);
 				mRenderer.mScene.mCamera.getBuffer()->position = params.pos;
 				mRenderer.mScene.mCamera.setRotation(params.pitch, params.yaw);
 			}
@@ -241,4 +244,8 @@ void GUI::render() const
     ImGui::Render();
 	
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+}
+
+void GUI::findScenes()
+{
 }
