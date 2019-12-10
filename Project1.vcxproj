@@ -265,6 +265,7 @@
     <ClCompile Include="Include\lodepng\lodepng.cpp" />
     <ClCompile Include="Source\BVHWrapper.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
+    <ClCompile Include="Source\CsvParser.cpp" />
     <ClCompile Include="Source\GUI.cpp" />
     <ClCompile Include="Source\main.cpp" />
   </ItemGroup>
@@ -362,6 +363,7 @@
     <ClInclude Include="Include\BVHWrapper.hpp" />
     <ClInclude Include="Include\Camera.hpp" />
     <ClInclude Include="Include\Constants.hpp" />
+    <ClInclude Include="Include\CsvParser.hpp" />
     <ClInclude Include="Include\ImGUI\imconfig.h" />
     <ClInclude Include="Include\ImGUI\imgui.h" />
     <ClInclude Include="Include\ImGUI\imgui_impl_dx11.h" />

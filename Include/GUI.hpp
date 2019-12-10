@@ -2,8 +2,7 @@
 #include <Windows.h>
 #include <d3d11.h>
 #include <DirectXMath.h>
-#include <vector>
-#include <string>
+#include "Scene.hpp"
 
 class Renderer;
 
@@ -18,11 +17,7 @@ public:
 	void render() const;
 
 private:
-	void findScenes();
-
-private:
-	Renderer& mRenderer;
-	
+	Renderer& mRenderer;	
 	int mPickedResolution = 0;
 	int mPickedScene = 3;
 	int mEditingLight = 0;

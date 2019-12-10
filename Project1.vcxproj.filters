@@ -350,6 +350,9 @@
     <ClInclude Include="Include\ImGUI\imstb_truetype.h">
       <Filter>ImGUI</Filter>
     </ClInclude>
+    <ClInclude Include="Include\CsvParser.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\main.cpp">
@@ -417,6 +420,9 @@
     </ClCompile>
     <ClCompile Include="Include\ImGUI\imgui_widgets.cpp">
       <Filter>ImGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\CsvParser.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

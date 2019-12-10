@@ -12,12 +12,12 @@ GUI::GUI(Renderer& renderer)
 {
 	IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+
+	[[maybe_unused]]
     ImGuiIO& io = ImGui::GetIO(); (void)io;
 	
 	// Setup Dear ImGui style
     ImGui::StyleColorsDark();
-
-	findScenes();
 }
 
 GUI::~GUI()
@@ -50,6 +50,8 @@ void GUI::update()
 		const float megapixels = (Input::getInstance().getResolution().first * Input::getInstance().getResolution().second) / 10e6;
         ImGui::Text("Average paths per pixel %.3f",  (mRenderer.mScene.mCamera.getBuffer()->iterationCounter * 2) / megapixels);
 
+		ImGui::Text("Light count %d", mRenderer.mScene.mCamera.getBuffer()->lightCount);
+
 		{
 			const char* items[] = { "HD 1280 x 720", "FHD 1920 x 1080", "QHD 2560 x 1440", "4K 3840 x 2160", "8K 7680 x 4320", "16K 15360 x 8640" };
 			Renderer::Resolution resolutions[] = {
@@ -66,36 +68,8 @@ void GUI::update()
 		}
 
 		{
-			// const char* scenes[] = { // todo automatic finding of models
-			// 	"testScene\\scene.gltf",
-			// 	"helmet\\scene.gltf",
-			// 	"bunny_glass\\bunny_glass_closed.gltf",
-			// 	"bunny_glass\\scene.gltf",
-			// 	"box\\box.gltf",
-			// 	"r3pu\\scene.gltf",
-			// };
-
-			struct
-			{
-				DirectX::XMVECTOR pos;
-				float pitch;
-				float yaw;
-			} const cameraParams[] = {
-				{ {-2.5, 2.2, 11.0}, -9, 312 },
-				{ {-2.6, 3.3, 1.3}, -23, 326 },
-				{ {-2.8, 5.4, 4.2}, -36, 302 },
-				{ {1.0, 3.0, 8.0}, 0, 270 },
-				{ {-9.2, 0.4, -6.3}, 2, 376 },
-				{ {8.6, -3.8, 17.8}, -2, 247 },
-			};
-			
-			if (ImGui::Combo("Scene", &mPickedScene, mScenePathsReferences.data(), mScenePathsReferences.size()))
-			{
-				const auto& params = cameraParams[mPickedScene];
-				mRenderer.initScene(mScenePathNames[mPickedScene]);
-				mRenderer.mScene.mCamera.getBuffer()->position = params.pos;
-				mRenderer.mScene.mCamera.setRotation(params.pitch, params.yaw);
-			}
+			if (ImGui::Combo("Scene", &mPickedScene, SceneParams::instance.pathsReference.data(), SceneParams::instance.pathsReference.size()))
+				mRenderer.initScene(SceneParams::instance.pathNames[mPickedScene]);
 		}
 
 		ImGui::Checkbox("Show Light Editor", &mShowEditor);
@@ -248,8 +222,4 @@ void GUI::render() const
     ImGui::Render();
 	
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-}
-
-void GUI::findScenes()
-{
 }

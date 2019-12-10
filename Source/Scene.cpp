@@ -12,11 +12,14 @@
 #include "Constants.hpp"
 #include <filesystem>
 #include <fstream>
+#include "CsvParser.hpp"
 
 namespace fs = std::filesystem;
 using namespace DirectX;
 
-SceneParams SceneParams::loadScenes()
+SceneParams SceneParams::instance = SceneParams();
+
+void SceneParams::loadScenes()
 {
 	for (const auto& f : fs::recursive_directory_iterator(R"(Assets\Models\)"))
 	{
@@ -25,43 +28,37 @@ SceneParams SceneParams::loadScenes()
 			if (f.path().filename().extension().string() == ".gltf")
 			{
 				pathNames.emplace_back(f.path().string().substr(14)); // length of assets\models
+				lights.emplace_back();
+				cameraParams.emplace_back();
 
-				auto paramsPath = f.path().relative_path().concat(".params");
-				std::ifstream file(paramsPath.string());
+				auto paramsPath = f.path().string().substr(0, pathNames.back().length() + 9) + ".params";
+				std::ifstream file(paramsPath);
 				if (file.is_open())
 				{
-					std::string token;
-					for (size_t i = 0; i < sizeof(CameraParam) / 4; i++)
-					{
-						std::getline(file, token, ',');
-						reinterpret_cast<float*>(&cameraParam)[i] = std::stof(token);
-					}
+					CSVIterator params(file);
 
-					auto getLight = [&token, &file]()
+					for (size_t i = 0; i < sizeof(CameraParam) / 4; i++) // todo add some error checking for file integrity
+						reinterpret_cast<float*>(&cameraParams.back())[i] = std::stof(params->operator[](i));
+
+					auto getLight = [](const CSVRow& row) -> Light
 					{
 						Light light;
 
 						for (size_t i = 0; i < sizeof(Light) / 4; i++)
-						{
-							std::getline(file, token, ',');
-							reinterpret_cast<float*>(&light)[i] = std::stof(token);
-						}
+							reinterpret_cast<float*>(&light)[i] = std::stof(row[i]);
 
 						return light;
 					};
 
-					while (!file.eof())
-					{
-						auto light = getLight();	
-						lights.emplace_back(light);
-					}
+					for (++params; params; ++params)
+						lights.back().emplace_back(getLight(*params));
 				}
 				else
 				{
 					// default params
-					cameraParam = { {1.0, 3.0, 8.0}, 0, 270 };
-					lights.emplace_back(Light{ {13.0, 4.5, 4.5}, {80.0, 80.0, 40.0}, 100.0 }); // todo load some default lights?
-					lights.emplace_back(Light{ {0.0, 4.5, 2.0}, {80.0, 80.0, 40.0}, 100.0 });
+					cameraParams.back() = { {1.0, 3.0, 8.0}, 0, 270 };
+					lights.back().emplace_back(Light{ {13.0f, 4.5f, 4.5f}, {80.0f, 80.0f, 40.0f}, 100.0f });
+					lights.back().emplace_back(Light{ {0.0, 4.5, 2.0}, {80.0, 80.0, 40.0}, 100.0 });
 				}
 			}
 		}
@@ -69,23 +66,35 @@ SceneParams SceneParams::loadScenes()
 
 	for (const auto& p : pathNames)
 		pathsReference.emplace_back(p.c_str());
-
 	
-	return *this;
+	instance = *this;
+}
+
+size_t SceneParams::getSceneIndex(const std::string& name)
+{
+	for (int i = 0; i < pathNames.size(); ++i)
+		if (name == pathNames[i])
+			return i;
+
+	throw std::runtime_error(fmt::format("Non existing scene {}", name));
 }
 
 Scene::Scene(ID3D11Device* device, const std::string& path)
 	: mDevice(device)
 	, mPath(path.substr(0, path.find_last_of('\\') + 1))
+	, mSceneName(path.substr(14)) // offset of Assets\\Models\\ 
 {	
 	loadScene(path);
-
 	
 	std::thread worker(&Scene::createBVH, this);
 	// createBVH();
 	loadTextures();
 	createSampler();
 	createLights();
+
+	const auto& cameraParams = SceneParams::instance.cameraParams[SceneParams::instance.getSceneIndex(mSceneName)];
+	mCamera.getBuffer()->position = XMLoadFloat3(&cameraParams.position);
+	mCamera.setRotation(cameraParams.pitch, cameraParams.yaw);
 
 	worker.join();
 
@@ -303,9 +312,10 @@ void Scene::createLights()
 	lightDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	lightDescriptor.StructureByteStride = sizeof(Light);
 
-	mLights[0] = { {13.0, 4.5, 4.5}, {80.0, 80.0, 40.0}, 100.0 }; // todo load some default lights?
-	mLights[1] = { {0.0, 4.5, 2.0}, {80.0, 80.0, 40.0}, 100.0 };
-
+	const auto& lights = SceneParams::instance.lights[SceneParams::instance.getSceneIndex(mSceneName)];
+	for (size_t i = 0; i < lights.size(); ++i)
+		mLights[i] = lights[i];
+	
 	D3D11_SUBRESOURCE_DATA dataInit = {};
 	dataInit.pSysMem = mLights.data();
 

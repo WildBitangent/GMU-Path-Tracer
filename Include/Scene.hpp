@@ -19,18 +19,24 @@ struct Light
 
 struct SceneParams
 {
-	SceneParams loadScenes();
+	SceneParams() { instance.loadScenes(); }
+	
+	void loadScenes();
+	size_t getSceneIndex(const std::string& name);
 	
 	struct CameraParam
 	{
 		DirectX::XMFLOAT3 position;
 		float pitch;
 		float yaw;
-	} cameraParam;
+	};
 	
 	std::vector<std::string> pathNames;
 	std::vector<const char*> pathsReference;
 	std::vector<std::vector<Light>> lights;
+	std::vector<CameraParam> cameraParams;
+
+	static SceneParams instance;
 };
 
 struct alignas(16) MaterialProperty // TODO CBUFFER
@@ -91,6 +97,7 @@ private:
 	ID3D11Device* mDevice;
 	Camera mCamera;
 	aiScene* mScene;
+	std::string mSceneName;
 	std::string mPath;
 
 	Buffer mBVHBuffer;
