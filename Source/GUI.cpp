@@ -4,6 +4,7 @@
 #include "ImGUI/imgui_impl_win32.h"
 #include "Renderer.hpp"
 #include "spdlog/fmt/fmt.h"
+#include "Input.hpp"
 
 GUI::GUI(Renderer& renderer)
 	: mRenderer(renderer)
@@ -42,6 +43,9 @@ void GUI::update()
         ImGui::Text("Current Paths %.3f GP", mRenderer.mScene.mCamera.getBuffer()->iterationCounter * 0.002);
         ImGui::Text("Iteration count %d", mRenderer.mScene.mCamera.getBuffer()->iterationCounter);
         ImGui::Text("Average %.3f ms/iteration (%.1f MP/s)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate * 2);
+
+		const float megapixels = (Input::getInstance().getResolution().first * Input::getInstance().getResolution().second) / 10e6;
+        ImGui::Text("Average paths per pixel %.3f",  (mRenderer.mScene.mCamera.getBuffer()->iterationCounter * 2) / megapixels);
 
 		{
 			const char* items[] = { "HD 1280 x 720", "FHD 1920 x 1080", "QHD 2560 x 1440", "4K 3840 x 2160", "8K 7680 x 4320", "16K 15360 x 8640" };

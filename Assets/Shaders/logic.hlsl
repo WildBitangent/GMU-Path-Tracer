@@ -258,7 +258,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			// eliminate path out of scene
 			if (_pstate_hitDistance == FLT_MAX)
 			{
-				radiance += float3(0, 1, 1) * throughput * 0.3;
+				radiance += float3(0, 1, 1) * throughput * 0.0001;
 				pathEliminated = true;
 			}
 			
