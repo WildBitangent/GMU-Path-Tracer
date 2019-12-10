@@ -17,6 +17,22 @@ struct Light
 	float radius;
 };
 
+struct SceneParams
+{
+	SceneParams loadScenes();
+	
+	struct CameraParam
+	{
+		DirectX::XMFLOAT3 position;
+		float pitch;
+		float yaw;
+	} cameraParam;
+	
+	std::vector<std::string> pathNames;
+	std::vector<const char*> pathsReference;
+	std::vector<std::vector<Light>> lights;
+};
+
 struct alignas(16) MaterialProperty // TODO CBUFFER
 {
 	enum Indices
@@ -42,7 +58,6 @@ struct alignas(16) MaterialProperty // TODO CBUFFER
 	// int32_t indexDiffuse = -1;
 	int32_t textureIndices[3] = { -1, -1, -1 };
 	uint32_t materialType = UE4;
-
 };
 
 class Scene

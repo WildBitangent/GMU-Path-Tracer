@@ -10,8 +10,69 @@
 #include "avir/avir_float8_avx.h"
 #include <thread>
 #include "Constants.hpp"
+#include <filesystem>
+#include <fstream>
 
+namespace fs = std::filesystem;
 using namespace DirectX;
+
+SceneParams SceneParams::loadScenes()
+{
+	for (const auto& f : fs::recursive_directory_iterator(R"(Assets\Models\)"))
+	{
+		if (f.is_regular_file())
+		{
+			if (f.path().filename().extension().string() == ".gltf")
+			{
+				pathNames.emplace_back(f.path().string().substr(14)); // length of assets\models
+
+				auto paramsPath = f.path().relative_path().concat(".params");
+				std::ifstream file(paramsPath.string());
+				if (file.is_open())
+				{
+					std::string token;
+					for (size_t i = 0; i < sizeof(CameraParam) / 4; i++)
+					{
+						std::getline(file, token, ',');
+						reinterpret_cast<float*>(&cameraParam)[i] = std::stof(token);
+					}
+
+					auto getLight = [&token, &file]()
+					{
+						Light light;
+
+						for (size_t i = 0; i < sizeof(Light) / 4; i++)
+						{
+							std::getline(file, token, ',');
+							reinterpret_cast<float*>(&light)[i] = std::stof(token);
+						}
+
+						return light;
+					};
+
+					while (!file.eof())
+					{
+						auto light = getLight();	
+						lights.emplace_back(light);
+					}
+				}
+				else
+				{
+					// default params
+					cameraParam = { {1.0, 3.0, 8.0}, 0, 270 };
+					lights.emplace_back(Light{ {13.0, 4.5, 4.5}, {80.0, 80.0, 40.0}, 100.0 }); // todo load some default lights?
+					lights.emplace_back(Light{ {0.0, 4.5, 2.0}, {80.0, 80.0, 40.0}, 100.0 });
+				}
+			}
+		}
+	}
+
+	for (const auto& p : pathNames)
+		pathsReference.emplace_back(p.c_str());
+
+	
+	return *this;
+}
 
 Scene::Scene(ID3D11Device* device, const std::string& path)
 	: mDevice(device)
