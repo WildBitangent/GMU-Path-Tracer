@@ -70,9 +70,18 @@ void Camera::update(float dt)
 	mCBuffer.iterationCounter++;
 	
 	if (delta.x != 0.f || delta.y != 0.f ||	Input::getInstance().anyActive())
+	{
 		if (mCBuffer.iterationCounter > 4)
 			mCBuffer.iterationCounter = 0;
 
+		moveHysteresis = true;
+	}
+	else if (moveHysteresis && mCBuffer.iterationCounter > 4)
+	{
+		mCBuffer.iterationCounter = 0;
+		moveHysteresis = false;
+	}
+		
 	const auto rrr = []() { return rand() / static_cast<float>(RAND_MAX); };
 	
 	mCBuffer.randomSeed = { rrr(), rrr() };

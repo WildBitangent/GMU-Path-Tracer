@@ -40,4 +40,6 @@ private:
 
 	float mPitch = {};
 	float mYaw = 270;
+
+	bool moveHysteresis = false;
 };

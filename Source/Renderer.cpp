@@ -156,9 +156,9 @@ void Renderer::update(float dt)
 		captureScreen();
 	
 	mScene.update(dt);
+	mGUI.update();
 	
 	mContext->UpdateSubresource(mCameraBuffer, 0, nullptr, mScene.mCamera.getBuffer(), 0, 0);
-	mGUI.update();
 }
 
 void Renderer::draw()

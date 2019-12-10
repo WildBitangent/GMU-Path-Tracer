@@ -75,7 +75,10 @@ void GUI::update()
 		ImGui::Checkbox("Show Light Editor", &mShowEditor);
 
 		if (ImGui::Checkbox("Sample Lights", &mSampleLights))
+		{
 			mRenderer.mScene.mCamera.getBuffer()->sampleLights = mSampleLights;
+			mRenderer.mScene.mCamera.getBuffer()->iterationCounter = 0;	
+		}
 		
         ImGui::End();
     }
@@ -106,7 +109,7 @@ void GUI::update()
 				mRenderer.mScene.mLights.data(), 
 				0, 0
 			);
-			mRenderer.mScene.mCamera.getBuffer()->iterationCounter = -1;
+			mRenderer.mScene.mCamera.getBuffer()->iterationCounter = 0;
 		}
 
 		ImGui::Columns(3, nullptr, false);
@@ -171,7 +174,7 @@ void GUI::update()
 
         		static size_t counter = 0;
         		if (counter++ % 5 == 0)
-					 mRenderer.mScene.mCamera.getBuffer()->iterationCounter = -1;
+					 mRenderer.mScene.mCamera.getBuffer()->iterationCounter = 0;
         	}
         	
             ImGui::Separator();
@@ -187,7 +190,7 @@ void GUI::update()
 					mRenderer.mScene.mLights.data(), 
 					0, 0
 				);
-				mRenderer.mScene.mCamera.getBuffer()->iterationCounter = -1;
+				mRenderer.mScene.mCamera.getBuffer()->iterationCounter = 0;
             	
                 ImGui::CloseCurrentPopup();
             }
@@ -205,7 +208,7 @@ void GUI::update()
 					mRenderer.mScene.mLights.data(), 
 					0, 0
 				);
-				mRenderer.mScene.mCamera.getBuffer()->iterationCounter = -1;
+				mRenderer.mScene.mCamera.getBuffer()->iterationCounter = 0;
 
         		ImGui::CloseCurrentPopup();
         	}
