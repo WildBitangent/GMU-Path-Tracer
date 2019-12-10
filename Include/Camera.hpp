@@ -17,6 +17,7 @@ public:
 		DirectX::XMFLOAT2 randomSeed;
 		int32_t iterationCounter = -1;	// TODO these shouldn't be in camera buffer
 		uint32_t lightCount = 2;
+		uint32_t sampleLights = false;
 	};
 public:
 

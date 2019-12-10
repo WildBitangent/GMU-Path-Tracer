@@ -21,6 +21,7 @@ private:
 	int mPickedScene = 3;
 	int mEditingLight = 0;
 	bool mShowEditor = false;
+	bool mSampleLights = false;
 
 	bool mUpdating = false;
 	DirectX::XMFLOAT3 mLightPos;

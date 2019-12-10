@@ -165,6 +165,7 @@ struct Camera
     float2 randomSeed;
     uint sampleCounter;
 	uint lightCount;
+	uint sampleLights;
 };
 
 struct BVHNode

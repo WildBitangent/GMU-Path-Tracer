@@ -175,6 +175,49 @@ void clearTexture(in uint tid, in uint gid, in uint stride)
 	}
 }
 
+bool sampleLights(inout float3 radiance, in float3 throughput, in uint index) // todo used only for debugging purposes
+{
+	if (cam.sampleLights)
+	{
+		int lightIndex = -1;
+		float closestHit = _pstate_hitDistance;
+		
+		for (uint i = 0; i < cam.lightCount; i++)
+		{
+			float3 position = lights[i].position - _pstate_rayOrigin;
+			float radius2 = 0.01; // todo
+			
+			float tca = dot(position, _pstate_rayDirection);
+			float d2 = dot(position, position) - tca * tca;
+			
+			if (d2 > radius2)
+				continue;
+			
+			float thc = sqrt(radius2 - d2);
+			float t0 = tca - thc;
+			float t1 = tca + thc;
+ 
+			if (t0 < 0)
+				t0 = t1; // if t0 is negative, let's use t1 instead
+ 
+			if (t0 > 0.0f && t0 < closestHit)
+			{
+				closestHit = t0;
+				lightIndex = i;
+			}
+		}
+		
+		if (lightIndex > -1)
+		{
+			float3 emission = lights[lightIndex].emission;
+			radiance += throughput * (emission / max(emission.x, max(emission.y, emission.z)));
+			return true;
+		}
+	}
+	
+	return false;
+}
+
 
 [numthreads(threadCountX, 1, 1)]
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_DispatchThreadID)
@@ -201,6 +244,9 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			// accunmulate from previous path
 			if (!_pstate_inShadow)
 				radiance += _pstate_directlight * throughput;
+			
+			if (sampleLights(radiance, throughput, index))
+				pathEliminated = true;
 		
 			// update throughput
 			throughput *= _pstate_lightThroughput;
