@@ -39,7 +39,7 @@ bool Input::update(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		RECT rect;
 		GetClientRect(hwnd, &rect);
 		
-		mResolution = { rect.right - rect.left,  rect.bottom - rect.top }; // todo I guess it will only return drawable area
+		mResolution = { rect.right - rect.left,  rect.bottom - rect.top };
 		mResized = true;
 	}
 	else

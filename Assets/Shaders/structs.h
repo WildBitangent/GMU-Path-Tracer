@@ -163,6 +163,8 @@ struct Camera
 	float pad3;
 	float2 pixelSize;
     float2 randomSeed;
+	float3 envColor;
+	float pad4;
     uint sampleCounter;
 	uint lightCount;
 	uint sampleLights;
@@ -221,97 +223,10 @@ struct MaterialProperty
     uint materialType;
 };
 
-//struct State
-//{
-//    Ray ray;
-//    float3 hitPoint;
-//    float3 baryCoord;
-//    Triangle tri;
-//    
-//	float2 texCoord;
-//    float3 normal;
-//    MaterialProperty material;
-//};
-
 struct Sample
 {
     float3 bsdfDir;
     float pdf;
-};
-
-//struct PathState // TODO prob align all flt3
-//{
-//	Ray ray[PATHCOUNT];
-//	Material material[PATHCOUNT];
-//	float3 normal[PATHCOUNT];
-//	float3 surfacePoint[PATHCOUNT]; 
-//	float3 baryCoord[PATHCOUNT];
-//	float hitDistance[PATHCOUNT];
-//	Triangle tri[PATHCOUNT]; // 26F
-//
-//	Ray shadowRay[PATHCOUNT];
-//	int lightIndex[PATHCOUNT];
-//	float lightDistance[PATHCOUNT];
-//	int inShadow[PATHCOUNT]; // default set to TRUE in controll //9
-//
-//	float3 radiance[PATHCOUNT];
-//	float3 throughtput[PATHCOUNT];
-//	float3 lightThroughput[PATHCOUNT];
-//	float3 directLight[PATHCOUNT];
-//	uint pathLength[PATHCOUNT];
-//	uint2 screenCoord[PATHCOUNT]; //15
-//}; // 26 + 9 + 15 = 50F / 200B
-
-//struct Queue
-//{
-//	int newPath[PATHCOUNT];
-//	int materialUE4[PATHCOUNT];
-//	int materialGlass[PATHCOUNT];
-//	int extensionRay[PATHCOUNT];
-//	int shadowRay[PATHCOUNT];
-//	
-//	uint queueCountNewPath;
-//	uint queueCountUE4;
-//	uint queueCountGlass;
-//	uint queueCountExtensionRay;
-//	uint queueCountShadowRay;
-//};
-//
-struct PathState // TODO prob align all flt3
-{
-	Ray ray;
-	Material material;
-	float4 normal;
-	float4 surfacePoint; 
-	float4 baryCoord;
-	float hitDistance;
-	Triangle tri; // 31F
-
-	Ray shadowRay;
-	int lightIndex;
-	float lightDistance;
-	int inShadow; // default set to TRUE in controll //11F
-
-	float4 radiance;
-	float4 throughtput;
-	float4 lightThroughput;
-	float4 directLight;
-	uint pathLength;
-	uint2 screenCoord; // 19F
-}; // 31 + 11 + 19 = 61F / 244B //488 MB
-
-struct Queue
-{
-	uint newPath;
-	uint materialUE4;
-	uint materialGlass;
-	uint extensionRay;
-	uint shadowRay;
-	// uint queueCountNewPath; // at the end of struct
-	// uint queueCountUE4;
-	// uint queueCountGlass;
-	// uint queueCountExtensionRay;
-	// uint queueCountShadowRay;
 };
 
 inline void broadcast(inout uint val)

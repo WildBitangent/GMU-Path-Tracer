@@ -52,6 +52,8 @@ void GUI::update()
 
 		ImGui::Text("Light count %d", mRenderer.mScene.mCamera.getBuffer()->lightCount);
 
+		ImGui::Separator();
+
 		{
 			const char* items[] = { "HD 1280 x 720", "FHD 1920 x 1080", "QHD 2560 x 1440", "4K 3840 x 2160", "8K 7680 x 4320", "16K 15360 x 8640" };
 			Renderer::Resolution resolutions[] = {
@@ -66,19 +68,36 @@ void GUI::update()
 			if (ImGui::Combo("Resolution", &mPickedResolution, items, IM_ARRAYSIZE(items)))
 				mRenderer.initResize(resolutions[mPickedResolution]);
 		}
+		
+		if (ImGui::Combo("Scene", &mPickedScene, SceneParams::instance.pathsReference.data(), SceneParams::instance.pathsReference.size()))
+			mRenderer.initScene(SceneParams::instance.pathNames[mPickedScene]);
 
-		{
-			if (ImGui::Combo("Scene", &mPickedScene, SceneParams::instance.pathsReference.data(), SceneParams::instance.pathsReference.size()))
-				mRenderer.initScene(SceneParams::instance.pathNames[mPickedScene]);
-		}
+		ImGui::Separator();
 
+		ImGui::ColorEdit3("Environment color", reinterpret_cast<float*>(&mRenderer.mScene.mCamera.getBuffer()->envColor));
+
+		ImGui::Separator();
+		
 		ImGui::Checkbox("Show Light Editor", &mShowEditor);
-
+		ImGui::SameLine();
 		if (ImGui::Checkbox("Sample Lights", &mSampleLights))
 		{
 			mRenderer.mScene.mCamera.getBuffer()->sampleLights = mSampleLights;
 			mRenderer.mScene.mCamera.getBuffer()->iterationCounter = 0;	
 		}
+
+		ImGui::Separator();
+
+		if (ImGui::Button("Restart"))
+			mRenderer.mScene.mCamera.getBuffer()->iterationCounter = 0;
+
+		ImGui::SameLine();
+		if (ImGui::Button("Reload Shaders (R)"))
+			mRenderer.reloadComputeShaders();
+
+		ImGui::SameLine();
+		if (ImGui::Button("Capture screen (C)"))
+			mRenderer.captureScreen();
 		
         ImGui::End();
     }

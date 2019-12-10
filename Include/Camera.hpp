@@ -14,8 +14,9 @@ public:
 		DirectX::XMVECTOR vertical;
 		DirectX::XMFLOAT2 pixelSize;
 		
-		DirectX::XMFLOAT2 randomSeed;
-		int32_t iterationCounter = -1;	// TODO these shouldn't be in camera buffer
+		DirectX::XMFLOAT2 randomSeed; // TODO these shouldn't be in camera buffer
+		DirectX::XMFLOAT3A envColor = { 0.0f, 0.0001f, 0.0001f };
+		int32_t iterationCounter = -1;	
 		uint32_t lightCount = 2;
 		uint32_t sampleLights = false;
 	};

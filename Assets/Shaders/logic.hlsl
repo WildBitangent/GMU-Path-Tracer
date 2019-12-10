@@ -9,6 +9,7 @@ cbuffer Material : register(b1)
 };
 
 ////////////////////////////////////////////
+
 RWTexture2DArray<float4> output : register(u0); // TODO probably globally coherent
 RWByteAddressBuffer pathState : register(u1);
 RWByteAddressBuffer queue : register(u2);
@@ -258,7 +259,7 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			// eliminate path out of scene
 			if (_pstate_hitDistance == FLT_MAX)
 			{
-				radiance += float3(0, 1, 1) * throughput * 0.0001;
+				radiance += throughput * cam.envColor;
 				pathEliminated = true;
 			}
 			
