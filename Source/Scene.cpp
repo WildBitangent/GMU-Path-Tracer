@@ -57,8 +57,8 @@ void SceneParams::loadScenes()
 				{
 					// default params
 					cameraParams.back() = { {1.0, 3.0, 8.0}, 0, 270 };
-					lights.back().emplace_back(Light{ {13.0f, 4.5f, 4.5f}, {80.0f, 80.0f, 40.0f}, 100.0f });
-					lights.back().emplace_back(Light{ {0.0, 4.5, 2.0}, {80.0, 80.0, 40.0}, 100.0 });
+					lights.back().emplace_back(Light{ {13.0f, 4.5f, 4.5f}, 100.0f, {80.0f, 80.0f, 40.0f}, 0.5f });
+					lights.back().emplace_back(Light{ {0.0, 4.5, 2.0}, 100.0, {80.0, 80.0, 40.0}, 0.5 });
 				}
 			}
 		}

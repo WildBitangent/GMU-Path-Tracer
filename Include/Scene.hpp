@@ -13,6 +13,7 @@
 struct Light
 {
 	DirectX::XMFLOAT3 position;
+	float falloff;
 	DirectX::XMFLOAT3 emission;
 	float radius;
 };

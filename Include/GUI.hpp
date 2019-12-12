@@ -29,4 +29,5 @@ private:
 	DirectX::XMFLOAT3 mLightColor;
 	float mLightPower = 80;
 	float mLightRadius;
+	float mLightFalloff;
 };

@@ -135,7 +135,6 @@ uint setMaterialHitProperties(in uint index)
 void createShadowRay(in uint index)
 {
 	uint lightIndex = uint(rand() * cam.lightCount);
-	float radius = 0.5;
 	
 	// sample point on light
 	float z = 1.0 - 2.0 * rand();
@@ -144,7 +143,7 @@ void createShadowRay(in uint index)
 	float x = r * cos(phi);
 	float y = r * sin(phi);
 	
-	float3 lightPosition = lights[lightIndex].position + float3(x, y, z) * radius;
+	float3 lightPosition = lights[lightIndex].position + float3(x, y, z) * lights[lightIndex].radius;
 	
 	// set shadow ray
 	float3 normal = _pstate_normal;
@@ -188,49 +187,6 @@ void clearTexture(in uint tid, in uint gid, in uint stride)
 		if (index < PATHCOUNT)
 			_set_queue_newPath(index, index);
 	}
-}
-
-bool sampleLights(inout float3 radiance, in float3 throughput, in uint index) // todo used only for debugging purposes
-{
-	if (cam.sampleLights)
-	{
-		int lightIndex = -1;
-		float closestHit = _pstate_hitDistance;
-		
-		for (uint i = 0; i < cam.lightCount; i++)
-		{
-			float3 position = lights[i].position - _pstate_rayOrigin;
-			float radius2 = 0.01; // todo
-			
-			float tca = dot(position, _pstate_rayDirection);
-			float d2 = dot(position, position) - tca * tca;
-			
-			if (d2 > radius2)
-				continue;
-			
-			float thc = sqrt(radius2 - d2);
-			float t0 = tca - thc;
-			float t1 = tca + thc;
- 
-			if (t0 < 0)
-				t0 = t1; // if t0 is negative, let's use t1 instead
- 
-			if (t0 > 0.0f && t0 < closestHit)
-			{
-				closestHit = t0;
-				lightIndex = i;
-			}
-		}
-		
-		if (lightIndex > -1)
-		{
-			float3 emission = lights[lightIndex].emission;
-			radiance += throughput * (emission / max(emission.x, max(emission.y, emission.z)));
-			return true;
-		}
-	}
-	
-	return false;
 }
 
 float3 sampleLight(uint index)

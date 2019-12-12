@@ -158,6 +158,7 @@ void GUI::update()
             	mLightColor = color;
             	mLightPower = power;
             	mLightRadius = light.radius;
+        		mLightFalloff = light.falloff;
             }
         	
             ImGui::NextColumn();
@@ -177,12 +178,14 @@ void GUI::update()
         	ImGui::DragFloat3("Position", reinterpret_cast<float*>(&mLightPos), 0.1);
         	ImGui::DragFloat("Power", &mLightPower, 0.1);
         	ImGui::DragFloat("Radius", &mLightRadius, 0.1);
+        	ImGui::DragFloat("Falloff", &mLightFalloff, 0.1);
 
         	if (mUpdating)
         	{
 				light.emission = { mLightColor.x * mLightPower, mLightColor.y * mLightPower, mLightColor.z * mLightPower };
         		light.position = mLightPos;
         		light.radius = mLightRadius;
+        		light.falloff = mLightFalloff;
 
         		mRenderer.mContext->UpdateSubresource(
 					mRenderer.mScene.mLightBuffer.buffer, 
@@ -202,6 +205,7 @@ void GUI::update()
             	light.emission = { mLightColor.x * mLightPower, mLightColor.y * mLightPower, mLightColor.z * mLightPower };
         		light.position = mLightPos;
         		light.radius = mLightRadius;
+        		light.falloff = mLightFalloff;
 
             	mRenderer.mContext->UpdateSubresource(
 					mRenderer.mScene.mLightBuffer.buffer, 

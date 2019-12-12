@@ -155,6 +155,7 @@ struct Ray
 struct Light
 {
     float3 position;
+	float falloff;
     float3 emission;
     float radius;
 };

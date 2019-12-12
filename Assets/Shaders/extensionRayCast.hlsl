@@ -170,7 +170,7 @@ void rayLightIntersection(inout uint lightIndex, inout float distance)
 	for (uint i = 0; i < cam.lightCount; i++)
 	{
 		float3 position = lights[i].position - state.ray.origin;
-		float radius2 = 0.5; // todo
+		float radius2 = lights[i].radius * lights[i].radius;
 			
 		float tca = dot(position, state.ray.direction);
 		float d2 = dot(position, position) - tca * tca;
