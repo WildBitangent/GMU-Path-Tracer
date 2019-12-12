@@ -219,6 +219,18 @@ bool sampleLights(inout float3 radiance, in float3 throughput, in uint index) //
 	return false;
 }
 
+float3 sampleLight(uint index)
+{
+	float radius = 0.1;
+	float distance = _pstate_hitDistance;
+	float pdf = (distance * distance) / radius;
+	
+	//if (_pstate_pathLength == 0 || materialProp[_pstate_triangle.w].materialType == 1) // either primary ray, or glass materila
+		return lights[index].emission;
+	//else
+	//	return powerHeuristic(bsdfSampleRec.pdf, lightSampleRec.pdf) * lightSampleRec.emission;
+}
+
 
 [numthreads(threadCountX, 1, 1)]
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_DispatchThreadID)
@@ -241,36 +253,41 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 
 			float3 throughput = _pstate_throughput;
 			float3 radiance = _pstate_radiance;
-		
-			// accunmulate from previous path
-			if (!_pstate_inShadow)
-				radiance += _pstate_directlight * throughput;
 			
-			if (sampleLights(radiance, throughput, index))
-				pathEliminated = true;
-		
-			// update throughput
-			throughput *= _pstate_lightThroughput;
-
-			// eliminate path with zero throughput
-			if (all(throughput <= 0)) // TODO tweak const
-				pathEliminated = true;
-
-			// eliminate path out of scene
-			if (_pstate_hitDistance == FLT_MAX)
+			if (_pstate_isEmitter > 0)
 			{
-				radiance += throughput * cam.envColor;
+				radiance += sampleLight(_pstate_isEmitter - 1) * throughput;
 				pathEliminated = true;
 			}
-			
-			// russian roulette
-			if (_pstate_pathLength > 200) // todo tweak
+			else
 			{
-				float p = max(throughput.x, max(throughput.y, throughput.z));
-				if (rand() > p * 0.004)
+				// accunmulate from previous path
+				if (!_pstate_inShadow)
+					radiance += _pstate_directlight * throughput;
+		
+				// update throughput
+				throughput *= _pstate_lightThroughput;
+
+				// eliminate path with zero throughput
+				if (all(throughput <= 0)) // TODO tweak const
 					pathEliminated = true;
 
-				throughput *= 1 / p;
+				// eliminate path out of scene
+				if (_pstate_hitDistance == FLT_MAX)
+				{
+					radiance += throughput * cam.envColor;
+					pathEliminated = true;
+				}
+			
+				// russian roulette
+				if (_pstate_pathLength > 200) // todo tweak
+				{
+					float p = max(throughput.x, max(throughput.y, throughput.z));
+					if (rand() > p * 0.004)
+						pathEliminated = true;
+
+					throughput *= 1 / p;
+				}
 			}
 
 			// find paths for elimination
@@ -298,9 +315,9 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			broadcast(glassOffset);
 
 			if (materialType == 0)
-			_set_queue_matUE4(ue4Offset + ue4Index, index);
+				_set_queue_matUE4(ue4Offset + ue4Index, index);
 			else if (materialType == 1)
-			_set_queue_matGlass(glassOffset + glassIndex, index);
+				_set_queue_matGlass(glassOffset + glassIndex, index);
 		
 			// update path only if it's alive
 			if (!pathEliminated)

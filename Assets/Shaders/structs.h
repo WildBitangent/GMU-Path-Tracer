@@ -40,6 +40,7 @@
 #define OFFSET_P_DIRECT_LIGHT			OFFSET_P_LIGHT_THROUGHPUT + F4SO
 #define OFFSET_P_PATH_LENGTH			OFFSET_P_DIRECT_LIGHT + F4SO
 #define OFFSET_P_SCREEN_COORD			OFFSET_P_PATH_LENGTH + F1SO
+#define OFFSET_P_ISEMITTER				OFFSET_P_SCREEN_COORD + F2SO
 
 ///////////////////////////////////////////////////
 // queue offsets
@@ -87,6 +88,7 @@
 #define _pstate_directlight				asfloat(pathState.Load3(GET(P_DIRECT_LIGHT, index, 4)))
 #define _pstate_pathLength				pathState.Load(GET(P_PATH_LENGTH, index, 1))
 #define _pstate_screenCoord				pathState.Load2(GET(P_SCREEN_COORD, index, 2))
+#define _pstate_isEmitter				pathState.Load(GET(P_ISEMITTER, index, 1))
 
 // LOADS ALWAYS LOAD FROM POSITION GIVEN BY "queueIndex" VARIABLE
 #define _queue_newPath					queue.Load(GET(Q_NEWPATH, queueIndex, 1))
@@ -119,6 +121,7 @@
 #define _set_pstate_directlight(val)			(pathState.Store3(GET(P_DIRECT_LIGHT, index, 4), asuint(val)))
 #define _set_pstate_pathLength(val)				(pathState.Store(GET(P_PATH_LENGTH, index, 1), val))
 #define _set_pstate_screenCoord(val)			(pathState.Store2(GET(P_SCREEN_COORD, index, 2), val))
+#define _set_pstate_isEmitter(val)				(pathState.Store(GET(P_ISEMITTER, index, 1), val))
 
 #define _set_queue_newPath(index, val)			(queue.Store(GET(Q_NEWPATH, index, 1), val))
 #define _set_queue_matUE4(index, val)			(queue.Store(GET(Q_MAT_UE4, index, 1), val))

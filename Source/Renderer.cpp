@@ -68,7 +68,7 @@ void Renderer::createBuffers()
 	
 	D3D11_BUFFER_DESC pathStateDescriptor = {};
 	pathStateDescriptor.Usage = D3D11_USAGE_DEFAULT;
-	pathStateDescriptor.ByteWidth = PATHCOUNT * 244;
+	pathStateDescriptor.ByteWidth = PATHCOUNT * 248;
 	pathStateDescriptor.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 	pathStateDescriptor.CPUAccessFlags = 0;
 	pathStateDescriptor.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;

@@ -24,3 +24,9 @@ inline float lightFalloff(float distance, float radius)
     float n = saturate(1 - pow(distance / radius, 4));
     return (n * n) / (distance * distance + 1);
 }
+
+inline float powerHeuristic(float rayPdf, float lightPdf)
+{
+	float t = rayPdf * rayPdf;
+	return t / (lightPdf*lightPdf + t);
+}

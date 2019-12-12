@@ -12,6 +12,13 @@ struct State
 
 ////////////////////////////////////////////
 
+cbuffer Cam : register(b0)
+{
+	Camera cam;
+};
+
+////////////////////////////////////////////
+
 RWByteAddressBuffer pathState : register(u1);
 RWByteAddressBuffer queue : register(u2);
 RWByteAddressBuffer queueCounters : register(u3);
@@ -19,6 +26,7 @@ RWByteAddressBuffer queueCounters : register(u3);
 StructuredBuffer<BVHNode> tree : register(t0);
 StructuredBuffer<Triangle> indices : register(t1);
 Buffer<float3> vertices : register(t2);
+StructuredBuffer<Light> lights : register(t3);
 
 ////////////////////////////////////////////
 
@@ -86,7 +94,7 @@ float rayAABBIntersection(float3 minbox, float3 maxbox, Ray r)
 }
 
 float rayBVHIntersection()
-{
+{	
     int stack[STACKSIZE];
     uint ptr = 0;
     stack[ptr++] = -1;
@@ -157,6 +165,34 @@ float rayBVHIntersection()
     return distance;
 }
 
+void rayLightIntersection(inout uint lightIndex, inout float distance)
+{
+	for (uint i = 0; i < cam.lightCount; i++)
+	{
+		float3 position = lights[i].position - state.ray.origin;
+		float radius2 = 1; // todo
+			
+		float tca = dot(position, state.ray.direction);
+		float d2 = dot(position, position) - tca * tca;
+			
+		if (d2 > radius2)
+			continue;
+			
+		float thc = sqrt(radius2 - d2);
+		float t0 = tca - thc;
+		float t1 = tca + thc;
+ 
+		if (t0 < 0)
+			t0 = t1; // if t0 is negative, let's use t1 instead
+ 
+		if (t0 > 0.0f && t0 < distance)
+		{
+			distance = t0;
+			lightIndex = i + 1;
+		}
+	}
+}
+
 
 [numthreads(threadCountX, 1, 1)]
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex) // TODO does it need queue - isn't it just going through all the paths all the times
@@ -178,9 +214,8 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex) // TODO does it need
 		state.ray.direction = _pstate_rayDirection;
 		
         float distance = rayBVHIntersection(); // TODO maybe traverse more than one path
-
-		// write 
-        if (distance < FLT_MAX)
+		
+		if (distance < FLT_MAX)
         {
 			_set_pstate_surfacePoint(state.hitPoint);
 			_set_pstate_baryCoord(state.baryCoord);
@@ -189,6 +224,11 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex) // TODO does it need
 			_set_pstate_triangle(tri);
 		}
 		
+		
+		uint lightIndex = 0;
+		rayLightIntersection(lightIndex, distance);
+		
+		_set_pstate_isEmitter(lightIndex);
 		_set_pstate_hitDistance(distance);
 	}
 }
