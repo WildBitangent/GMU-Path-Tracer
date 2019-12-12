@@ -177,7 +177,7 @@ void GUI::update()
             ImGui::Separator();
         	ImGui::DragFloat3("Position", reinterpret_cast<float*>(&mLightPos), 0.1);
         	ImGui::DragFloat("Power", &mLightPower, 0.1);
-        	ImGui::DragFloat("Radius", &mLightRadius, 0.1);
+        	ImGui::DragFloat("Radius", &mLightRadius, 0.01);
         	ImGui::DragFloat("Falloff", &mLightFalloff, 0.1);
 
         	if (mUpdating)
