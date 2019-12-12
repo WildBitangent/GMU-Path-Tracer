@@ -53,7 +53,7 @@ bool rayTriangleIntersection(float3 v0, float3 v1, float3 v2, inout float distan
 	
     float t = dot(e2, qvec) * invDet;
 	
-    if (t > EPSILON && t < 1 / EPSILON) // ray intersection
+    if (t >= 0/*t > EPSILON && t < 1 / EPSILON*/) // ray intersection
     {
         float3 pp = state.ray.origin + state.ray.direction * t;
 

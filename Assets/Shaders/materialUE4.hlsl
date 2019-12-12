@@ -106,9 +106,10 @@ float3 ue4Evaluate(in State state, float3 direction)
 	
     float D = GGXTrowbridgeReitz(NdotH, state.material.roughness * state.material.roughness);
     float G = smithSchlickGGX(NdotL, state.material.roughness) * smithSchlickGGX(NdotV, state.material.roughness);
-    float3 specColor = lerp(0.037 * float3(1, 1, 1), state.material.baseColor.rgb, state.material.metallic);
-    float F0 = -schlickFresnel(0, LdotH);
-    float3 F = lerp(specColor, float3(1, 1, 1), F0 * float3(1, 1, 1));
+	
+	float3 specColor = lerp(0.037 * float3(1, 1, 1), state.material.baseColor.rgb, state.material.metallic);
+	float fc = pow(1 - LdotH, 5);
+	float3 F = (1 - fc) * specColor + fc;
     
     return (state.material.baseColor.xyz / PI) * (1.0 - state.material.metallic) + (D * F * G) / (4 * NdotL * NdotV);
 }
