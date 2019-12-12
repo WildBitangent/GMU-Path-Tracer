@@ -131,11 +131,21 @@ uint setMaterialHitProperties(in uint index)
 void createShadowRay(in uint index)
 {
 	uint lightIndex = uint(rand() * cam.lightCount);
+	float radius = 0.5;
+	
+	// sample point on light
+	float z = 1.0 - 2.0 * rand();
+	float r = sqrt(max(0.f, 1.0 - z * z));
+	float phi = 2.0 * PI * rand();
+	float x = r * cos(phi);
+	float y = r * sin(phi);
+	
+	float3 lightPosition = lights[lightIndex].position + float3(x, y, z) * radius;
 	
 	// set shadow ray
 	float3 normal = _pstate_normal;
 	float3 surfacePos = _pstate_surfacePoint + normal * EPSILON_OFFSET;
-    float3 lightDir = lights[lightIndex].position - surfacePos;
+    float3 lightDir = lightPosition - surfacePos;
     float distance = length(lightDir);
 
     lightDir = normalize(lightDir);

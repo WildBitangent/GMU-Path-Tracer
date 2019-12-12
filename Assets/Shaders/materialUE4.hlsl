@@ -181,7 +181,11 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 			float distance = _pstate_lightDistance;
 			Light light = lights[lightIndex];
 			
-			float3 directLight = ue4Evaluate(state, lightDir) * light.emission * lightFalloff(distance, light.radius);
+			float radius = 0.5;
+			float lightPdf = distance * distance / (4 * PI * radius * radius);
+			float bsdfPdf = ue4Pdf(state, lightDir);
+			
+			float3 directLight = powerHeuristic(lightPdf, bsdfPdf) * ue4Evaluate(state, lightDir) * light.emission * cam.lightCount * lightFalloff(distance, light.radius);
 			_set_pstate_directlight(directLight);
 			_set_queue_shadowRay(shadowRayOffset + shadowIndex, index);
 		}
