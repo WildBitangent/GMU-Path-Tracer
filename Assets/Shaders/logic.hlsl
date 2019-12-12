@@ -5,7 +5,7 @@
 
 cbuffer Material : register(b1)
 {
-    MaterialProperty materialProp[128]; // hopefully there won't be more than 128 materials (dx12 has unbound descriptors)
+	MaterialProperty materialProp[MAX_LIGHTS]; // hopefully there won't be more than 128 materials (dx12 has unbound descriptors)
 };
 
 ////////////////////////////////////////////
@@ -57,16 +57,20 @@ void endPath(in float3 radiance, in uint index)
 		float3 pixel = output[uint3(coord, 0)].rgb;
 		uint sampleCount = asuint(output[uint3(coord, 0)].a);
 
-		// kahan summation
-		float3 sum = pixel * sampleCount++;
-		float3 c = output[uint3(coord, 1)];
 		
-		float3 y = radiance - c;
-		float3 t = sum + y;
+		// Kahan summation ain't worth - there is ~1-2MP/s performance loss with only tiny faster convergence
+		//// kahan summation 
+		//float3 sum = pixel * sampleCount++;
+		//float3 c = output[uint3(coord, 1)];
+		
+		//float3 y = radiance - c;
+		//float3 t = sum + y;
 	
-		// write out
-		output[uint3(coord, 0)] = float4(t / sampleCount, asfloat(sampleCount)); // probably race condition
-		output[uint3(coord, 1)] = float4((t - sum) - y, 0);
+		//// write out
+		//output[uint3(coord, 0)] = float4(t / sampleCount, asfloat(sampleCount)); // probably race condition
+		//output[uint3(coord, 1)] = float4((t - sum) - y, 0);
+		
+		output[uint3(coord, 0)] = float4(((pixel * sampleCount++) + radiance) / sampleCount, asfloat(sampleCount)); // probably race condition
 		
 		_set_queue_newPath(offset + qindex, index);
 	}
@@ -163,7 +167,7 @@ void clearTexture(in uint tid, in uint gid, in uint stride)
 {
 	for (uint i = 0; true; i++)
 	{
-		uint index = tid + threadCountX * gid + i * stride; // todo switch to dispatchID
+		uint index = tid + NUM_THREADS * gid + i * stride; // todo switch to dispatchID
 		
 		uint width = 1 / cam.pixelSize.x;
 		uint height = 1 / cam.pixelSize.y;
@@ -176,7 +180,7 @@ void clearTexture(in uint tid, in uint gid, in uint stride)
 				
 			float3 color = output[uint3(coord, 0)];
 			output[uint3(coord, 0)] = float4(color, asfloat(0));
-			output[uint3(coord, 1)] = float4(0, 0, 0, 0);
+			//output[uint3(coord, 1)] = float4(0, 0, 0, 0);
 		}
 		else if (index >= PATHCOUNT) // texture is cleared, terminate loop
 			break;
@@ -230,22 +234,17 @@ bool sampleLights(inout float3 radiance, in float3 throughput, in uint index) //
 }
 
 float3 sampleLight(uint index)
-{
-	float radius = 0.1;
-	float distance = _pstate_hitDistance;
-	float pdf = (distance * distance) / radius;
-	
-	//if (_pstate_pathLength == 0 || materialProp[_pstate_triangle.w].materialType == 1) // either primary ray, or glass materila
-		return lights[index].emission;
-	//else
-	//	return powerHeuristic(bsdfSampleRec.pdf, lightSampleRec.pdf) * lightSampleRec.emission;
+{	
+	float3 emission = lights[index].emission;
+	float emax = max(emission.x, max(emission.y, emission.z));
+	return emission / emax;
 }
 
 
-[numthreads(threadCountX, 1, 1)]
-void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_DispatchThreadID)
+[numthreads(NUM_THREADS, 1, 1)]
+void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex)
 {
-    uint stride = threadCountX * numGroups;	
+	uint stride = NUM_THREADS * NUM_GROUPS;
 	
 	// camera moved - resets accumulation buffer and generate new paths
 	if (cam.sampleCounter == 0)
@@ -254,9 +253,9 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex, uint3 giseed : SV_Di
 	}
 	else
 	{
-		for (uint i = 0; i < 16; i++)
+		for (uint i = 0; i < ITERATIONS; i++)
 		{
-			uint index = tid + 256 * gid.x + i * stride;
+			uint index = tid + NUM_THREADS * gid.x + i * stride;
 
 			seed = float2(frac(index * INVPI), frac(index * PI));
 			pathEliminated = false;

@@ -113,7 +113,7 @@ void Renderer::createRenderTexture(Resolution res)
 	renderTextureDescriptor.Width = res.first;
 	renderTextureDescriptor.Height = res.second;
 	renderTextureDescriptor.MipLevels = 1;
-	renderTextureDescriptor.ArraySize = 2;
+	renderTextureDescriptor.ArraySize = 1;
 	renderTextureDescriptor.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	renderTextureDescriptor.SampleDesc.Count = 1;
 	renderTextureDescriptor.SampleDesc.Quality = 0;
@@ -125,13 +125,13 @@ void Renderer::createRenderTexture(Resolution res)
 	D3D11_SHADER_RESOURCE_VIEW_DESC renderTextureSRVDesc = {};
 	renderTextureSRVDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	renderTextureSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-	renderTextureSRVDesc.Texture2DArray.ArraySize = 2; // only first texture needed for rendering
+	renderTextureSRVDesc.Texture2DArray.ArraySize = 1; // only first texture needed for rendering
 	renderTextureSRVDesc.Texture2DArray.MipLevels = 1;
 
 	D3D11_UNORDERED_ACCESS_VIEW_DESC renderTextureUAVDesc = {};
 	renderTextureUAVDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	renderTextureUAVDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
-	renderTextureUAVDesc.Texture2DArray.ArraySize = 2;
+	renderTextureUAVDesc.Texture2DArray.ArraySize = 1;
 
 	mRenderTexture.reset();
 	mRenderTextureSRV.reset();
@@ -193,22 +193,22 @@ void Renderer::draw()
 	
 
 	mContext->CSSetShader(mShaderLogic, nullptr, 0);
-	mContext->Dispatch(512, 1, 1);
+	mContext->Dispatch(NUM_GROUPS, 1, 1);
 	
 	mContext->CSSetShader(mShaderNewPath, nullptr, 0);
-	mContext->Dispatch(512, 1, 1);
+	mContext->Dispatch(NUM_GROUPS, 1, 1);
 	
-	mContext->CSSetShader(mShaderMaterialUE4, nullptr, 0); // TODO maybe pick less thread groups since materials will be most likely uniformly distributed
-	mContext->Dispatch(512, 1, 1);
+	mContext->CSSetShader(mShaderMaterialUE4, nullptr, 0);
+	mContext->Dispatch(NUM_GROUPS, 1, 1);
 	
 	mContext->CSSetShader(mShaderMaterialGlass, nullptr, 0);
-	mContext->Dispatch(512, 1, 1); 
+	mContext->Dispatch(NUM_GROUPS, 1, 1); 
 
 	mContext->CSSetShader(mShaderExtensionRay, nullptr, 0);
-	mContext->Dispatch(512, 1, 1);
+	mContext->Dispatch(NUM_GROUPS, 1, 1);
 	
 	mContext->CSSetShader(mShaderShadowRay, nullptr, 0);
-	mContext->Dispatch(512, 1, 1);
+	mContext->Dispatch(NUM_GROUPS, 1, 1);
 
 	
 	mContext->CSSetShaderResources(0, SRVs.size(), nullSRV.data());
@@ -464,8 +464,23 @@ T Renderer::createShader(const std::wstring& path, const std::string& target)
 	T shader;
 	uni::Blob err;
 	uni::Blob compiled;
+
+	auto pathcount = std::to_string(PATHCOUNT);
+	auto numGroups = std::to_string(NUM_GROUPS);
+	auto numThreads = std::to_string(NUM_THREADS);
+	auto iterations = std::to_string(ITERATIONS);
+	auto maxLights = std::to_string(MAX_LIGHTS);
 	
-	auto result = D3DCompileFromFile(path.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", target.c_str(), {}, {}, &compiled, &err);
+	const std::array<D3D_SHADER_MACRO, 6> defines = {
+		"PATHCOUNT", pathcount.c_str(),
+		"NUM_GROUPS", numGroups.c_str(),
+		"NUM_THREADS", numThreads.c_str(),
+		"ITERATIONS", iterations.c_str(),
+		"MAX_LIGHTS", maxLights.c_str(),
+		nullptr, nullptr
+	};
+	
+	auto result = D3DCompileFromFile(path.c_str(), defines.data(), D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", target.c_str(), {}, {}, &compiled, &err);
 	if (result != S_OK)
 		throw std::runtime_error(fmt::format("Failed to compile {}. ERR: {}\n\n{}", std::string(path.begin(), path.end()), result, reinterpret_cast<const char*>(err->GetBufferPointer())));
 

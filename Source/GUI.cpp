@@ -43,12 +43,12 @@ void GUI::update()
 		ImGui::Begin("PGR Path Tracer");
 		
 		
-        ImGui::Text("Current Paths %.3f GP", mRenderer.mScene.mCamera.getBuffer()->iterationCounter * 0.002);
+        ImGui::Text("Current Paths %.3f GP", mRenderer.mScene.mCamera.getBuffer()->iterationCounter * (PATHCOUNT / 1e9));
         ImGui::Text("Iteration count %d", mRenderer.mScene.mCamera.getBuffer()->iterationCounter);
-        ImGui::Text("Average %.3f ms/iteration (%.1f MP/s)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate * 2);
+        ImGui::Text("Average %.3f ms/iteration (%.1f MP/s)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate * (PATHCOUNT / 1e6));
 
-		const float megapixels = (Input::getInstance().getResolution().first * Input::getInstance().getResolution().second) / 10e6;
-        ImGui::Text("Average paths per pixel %.3f",  (mRenderer.mScene.mCamera.getBuffer()->iterationCounter * 2) / megapixels);
+		const float megapixels = (Input::getInstance().getResolution().first * Input::getInstance().getResolution().second);
+        ImGui::Text("Average paths per pixel %.3f",  mRenderer.mScene.mCamera.getBuffer()->iterationCounter * (PATHCOUNT / megapixels));
 
 		ImGui::Text("Light count %d", mRenderer.mScene.mCamera.getBuffer()->lightCount);
 

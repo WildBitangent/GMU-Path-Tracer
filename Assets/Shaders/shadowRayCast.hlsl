@@ -136,7 +136,7 @@ bool rayBVHIntersection(in Ray ray, float lightDistance)
 }
 
 
-[numthreads(threadCountX, 1, 1)]
+[numthreads(NUM_THREADS, 1, 1)]
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex)
 {
 	// reset queues from previous stages (newpath, ue4, glass)
@@ -147,12 +147,12 @@ void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex)
 		queueCounters.Store4(OFFSET_QC_NEWPATH, uint4(0, last_newPathCount.x + last_newPathCount.y, 0, 0));
 	}
 	
-    uint stride = threadCountX * numGroups;
+	uint stride = NUM_THREADS * NUM_GROUPS;
 	uint queueElementCount = queueCounters.Load(OFFSET_QC_SHADOWRAY);
 
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < ITERATIONS; i++)
     {
-        uint queueIndex = tid + 256 * gid.x + i * stride;
+        uint queueIndex = tid + NUM_THREADS * gid.x + i * stride;
         if (queueIndex >= queueElementCount)
             break;
 		

@@ -194,16 +194,16 @@ void rayLightIntersection(inout uint lightIndex, inout float distance)
 }
 
 
-[numthreads(threadCountX, 1, 1)]
+[numthreads(NUM_THREADS, 1, 1)]
 void main(uint3 gid : SV_GroupID, uint tid : SV_GroupIndex) // TODO does it need queue - isn't it just going through all the paths all the times
 {
-    uint stride = threadCountX * numGroups;
+    uint stride = NUM_THREADS * NUM_GROUPS;
 	//uint queueElementCount = queueCounters.Load(OFFSET_EXTRAY);
 
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < ITERATIONS; i++)
     {
 		// Always going through all paths
-		uint queueIndex = tid + 256 * gid.x + i * stride;
+		uint queueIndex = tid + NUM_THREADS * gid.x + i * stride;
         //if (queueIndex >= queueElementCount)
         //    break;
 		
